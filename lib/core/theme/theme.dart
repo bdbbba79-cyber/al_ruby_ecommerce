@@ -1,39 +1,40 @@
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  static const Color primaryColor = Color(0xFF0F62FE); // Premium Blue
-  static const Color accentColor = Color(0xFF1E293B);  // Slate Dark
-  static const Color backgroundColor = Colors.white;   // White background
-  static const Color surfaceColor = Color(0xFFF8FAFC);     // Light grey surface
+  static const Color primaryColor = Color(0xFFC6A473); // Luxury Gold
+  static const Color accentColor = Color(0xFF05372B);  // Medium Dark Green
+  static const Color backgroundColor = Color(0xFF011E16); // Very Dark Green
+  static const Color surfaceColor = Color(0xFF022B20);     // Surface Green
 
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,
-      colorScheme: const ColorScheme.light(
+      brightness: Brightness.dark, // Set dark brightness so standard widgets default to dark mode style
+      colorScheme: const ColorScheme.dark(
         primary: primaryColor,
         secondary: accentColor,
         background: backgroundColor,
         surface: surfaceColor,
-        onPrimary: Colors.white,
+        onPrimary: Color(0xFF011E16), // Dark text on gold button
         onSecondary: Colors.white,
-        onBackground: Color(0xFF0F172A),
-        onSurface: Color(0xFF0F172A),
+        onBackground: Colors.white,
+        onSurface: Colors.white,
       ),
       scaffoldBackgroundColor: backgroundColor,
       appBarTheme: const AppBarTheme(
         backgroundColor: backgroundColor,
-        foregroundColor: Color(0xFF0F172A),
+        foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: false,
-        iconTheme: IconThemeData(color: Color(0xFF0F172A)),
+        iconTheme: IconThemeData(color: Colors.white),
       ),
       textTheme: const TextTheme(
-        displayLarge: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF0F172A), letterSpacing: -0.5),
-        displayMedium: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
-        titleLarge: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
-        titleMedium: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF0F172A)),
-        bodyLarge: TextStyle(fontSize: 16, color: Color(0xFF334155)),
-        bodyMedium: TextStyle(fontSize: 14, color: Color(0xFF64748B)),
+        displayLarge: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFFE5D5C0), letterSpacing: -0.5),
+        displayMedium: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Color(0xFFE5D5C0)),
+        titleLarge: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+        titleMedium: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white),
+        bodyLarge: TextStyle(fontSize: 16, color: Colors.white),
+        bodyMedium: TextStyle(fontSize: 14, color: Color(0xFF9CA3AF)),
         labelLarge: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: primaryColor),
       ),
       buttonTheme: const ButtonThemeData(
@@ -43,7 +44,7 @@ class AppTheme {
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: primaryColor,
-          foregroundColor: Colors.white,
+          foregroundColor: const Color(0xFF011E16),
           elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -61,7 +62,7 @@ class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: const Color(0xFFF1F5F9),
+        fillColor: surfaceColor,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide.none,
@@ -72,21 +73,23 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: primaryColor, width: 2),
+          borderSide: const BorderSide(color: primaryColor, width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
           borderSide: const BorderSide(color: Colors.red, width: 1.5),
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        hintStyle: const TextStyle(color: Color(0xFF94A3B8)),
+        hintStyle: const TextStyle(color: Color(0xFF9CA3AF)),
+        prefixIconColor: const Color(0xFF9CA3AF),
+        suffixIconColor: const Color(0xFF9CA3AF),
       ),
       cardTheme: CardThemeData(
         color: surfaceColor,
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
-          side: const BorderSide(color: Color(0xFFE2E8F0), width: 1),
+          side: const BorderSide(color: Color(0xFF05372B), width: 1),
         ),
       ),
     );

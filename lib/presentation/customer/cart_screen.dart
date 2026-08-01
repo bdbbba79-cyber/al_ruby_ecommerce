@@ -11,24 +11,26 @@ class CartScreen extends ConsumerWidget {
     final cartItems = ref.watch(cartProvider);
     final cartNotifier = ref.read(cartProvider.notifier);
     final subtotal = cartNotifier.subtotal;
-    const shippingCharge = 50.0; // Flat shipping rate
-    final grandTotal = subtotal + shippingCharge;
+    const shippingCharge = 0.0; // Flat shipping rate as in Screen 4 (Free)
+    const discount = 280.0; // Coupon discount example from Screen 4
+    final grandTotal = subtotal - discount;
 
     final isDesktop = MediaQuery.of(context).size.width > 800;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.background,
       appBar: AppBar(
-        title: const Text('Shopping Cart', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('MY CART', style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+        centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF0F172A)),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => context.pop(),
         ),
       ),
       body: cartItems.isEmpty
           ? _buildEmptyCart(context)
           : SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
               child: Center(
                 child: Container(
                   constraints: const BoxConstraints(maxWidth: 1200),
@@ -38,14 +40,14 @@ class CartScreen extends ConsumerWidget {
                           children: [
                             Expanded(flex: 2, child: _buildCartItemsList(context, cartItems, cartNotifier)),
                             const SizedBox(width: 32),
-                            Expanded(child: _buildOrderSummaryCard(context, subtotal, shippingCharge, grandTotal)),
+                            Expanded(child: _buildOrderSummaryCard(context, subtotal, discount, shippingCharge, grandTotal)),
                           ],
                         )
                       : Column(
                           children: [
                             _buildCartItemsList(context, cartItems, cartNotifier),
                             const SizedBox(height: 24),
-                            _buildOrderSummaryCard(context, subtotal, shippingCharge, grandTotal),
+                            _buildOrderSummaryCard(context, subtotal, discount, shippingCharge, grandTotal),
                           ],
                         ),
                 ),
@@ -54,7 +56,6 @@ class CartScreen extends ConsumerWidget {
     );
   }
 
-  // --- Empty Cart View ---
   Widget _buildEmptyCart(BuildContext context) {
     return Center(
       child: Padding(
@@ -62,25 +63,15 @@ class CartScreen extends ConsumerWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.shopping_bag_outlined, size: 100, color: Color(0xFF94A3B8)),
+            const Icon(Icons.shopping_bag_outlined, size: 80, color: Colors.grey),
             const SizedBox(height: 24),
             const Text(
               'Your Cart is Empty',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Explore our premium collection of perfumes and attars and add them to your cart.',
-              style: TextStyle(color: Color(0xFF64748B), fontSize: 15),
-              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
             ),
             const SizedBox(height: 32),
             ElevatedButton(
               onPressed: () => context.go('/home'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF0F62FE),
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-              ),
               child: const Text('START SHOPPING'),
             ),
           ],
@@ -89,67 +80,63 @@ class CartScreen extends ConsumerWidget {
     );
   }
 
-  // --- Cart Items list ---
   Widget _buildCartItemsList(BuildContext context, List<CartItem> items, CartNotifier notifier) {
     return Card(
       child: ListView.separated(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         itemCount: items.length,
-        separatorBuilder: (context, index) => const Divider(color: Color(0xFFE2E8F0), height: 1),
+        separatorBuilder: (context, index) => const Divider(color: Color(0xFF05372B), height: 1),
         itemBuilder: (context, index) {
           final item = items[index];
           final product = item.product;
-          
+
           return Padding(
             padding: const EdgeInsets.all(16.0),
             child: Row(
               children: [
-                // Product Thumbnail
                 Container(
-                  height: 80,
-                  width: 80,
+                  height: 70,
+                  width: 70,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                    border: Border.all(color: const Color(0xFF05372B)),
                   ),
                   clipBehavior: Clip.antiAlias,
                   child: product.images.isNotEmpty
                       ? Image.network(product.images.first, fit: BoxFit.cover)
-                      : Container(color: const Color(0xFFF1F5F9)),
+                      : Container(color: Colors.grey.shade800),
                 ),
                 const SizedBox(width: 16),
-                // Details
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         product.name,
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF0F172A)),
-                        maxLines: 2,
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.white),
+                        maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 4),
                       Text(
                         '₹${product.sellingPrice.toStringAsFixed(0)} each',
-                        style: const TextStyle(color: Color(0xFF64748B), fontSize: 13),
+                        style: const TextStyle(color: Colors.grey, fontSize: 12),
                       ),
                       const SizedBox(height: 12),
-                      // Mobile quantity controls
                       Row(
                         children: [
-                          _buildQuantityButton(Icons.remove, () {
+                          _buildQuantityButton(context, Icons.remove, () {
                             notifier.updateQuantity(product, item.quantity - 1);
                           }),
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 10.0),
                             child: Text(
                               '${item.quantity}',
-                              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
                             ),
                           ),
-                          _buildQuantityButton(Icons.add, () {
+                          _buildQuantityButton(context, Icons.add, () {
                             notifier.updateQuantity(product, item.quantity + 1);
                           }),
                         ],
@@ -158,17 +145,16 @@ class CartScreen extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(width: 16),
-                // Total price & delete
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
                       '₹${item.totalPrice.toStringAsFixed(0)}',
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0F62FE)),
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 8),
                     IconButton(
-                      icon: const Icon(Icons.delete_outline, color: Colors.red),
+                      icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
                       onPressed: () => notifier.removeItem(product),
                     )
                   ],
@@ -181,72 +167,94 @@ class CartScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildQuantityButton(IconData icon, VoidCallback onTap) {
+  Widget _buildQuantityButton(BuildContext context, IconData icon, VoidCallback onTap) {
     return Material(
-      color: const Color(0xFFF1F5F9),
+      color: const Color(0xFF05372B),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(4),
         child: Padding(
           padding: const EdgeInsets.all(6.0),
-          child: Icon(icon, size: 16, color: const Color(0xFF0F172A)),
+          child: Icon(icon, size: 14, color: Colors.white),
         ),
       ),
     );
   }
 
-  // --- Order Summary Card ---
-  Widget _buildOrderSummaryCard(BuildContext context, double subtotal, double shipping, double total) {
+  Widget _buildOrderSummaryCard(BuildContext context, double subtotal, double discount, double shipping, double total) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(24.0),
+        padding: const EdgeInsets.all(20.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const Text(
               'Order Summary',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
+            // Coupon Code Field
+            Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    decoration: const InputDecoration(
+                      hintText: 'Coupon Code',
+                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                TextButton(
+                  onPressed: () {},
+                  child: const Text('Apply', style: TextStyle(color: Color(0xFFC6A473), fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Subtotal', style: TextStyle(color: Color(0xFF64748B))),
-                Text('₹${subtotal.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                const Text('Subtotal', style: TextStyle(color: Colors.grey)),
+                Text('₹${subtotal.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
               ],
             ),
             const SizedBox(height: 12),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Shipping Rate', style: TextStyle(color: Color(0xFF64748B))),
-                Text('₹${shipping.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                const Text('Discount', style: TextStyle(color: Colors.grey)),
+                Text('- ₹${discount.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
               ],
             ),
-            const Divider(color: Color(0xFFE2E8F0), height: 32),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Shipping', style: TextStyle(color: Colors.grey)),
+                const Text('Free', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
+              ],
+            ),
+            const Divider(color: Color(0xFF05372B), height: 28),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
-                  'Grand Total',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                  'Total',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
                 ),
                 Text(
                   '₹${total.toStringAsFixed(0)}',
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF0F62FE)),
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
                 ),
               ],
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 24),
             ElevatedButton(
               onPressed: () {
                 context.push('/checkout');
               },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF0F62FE),
-                padding: const EdgeInsets.symmetric(vertical: 16),
-              ),
               child: const Text('PROCEED TO CHECKOUT'),
             ),
           ],

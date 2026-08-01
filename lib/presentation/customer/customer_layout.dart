@@ -1,0 +1,174 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:al_ruby_ecommerce/presentation/providers/providers.dart';
+
+// Tab Views
+import 'package:al_ruby_ecommerce/presentation/customer/home_screen.dart';
+import 'package:al_ruby_ecommerce/presentation/customer/products_view.dart';
+import 'package:al_ruby_ecommerce/presentation/customer/wishlist_view.dart';
+import 'package:al_ruby_ecommerce/presentation/customer/orders_view.dart';
+import 'package:al_ruby_ecommerce/presentation/customer/profile_screen.dart';
+
+final customerTabIndexProvider = StateProvider<int>((ref) => 0);
+
+class CustomerLayout extends ConsumerStatefulWidget {
+  final int initialIndex;
+  const CustomerLayout({super.key, this.initialIndex = 0});
+
+  @override
+  ConsumerState<CustomerLayout> createState() => _CustomerLayoutState();
+}
+
+class _CustomerLayoutState extends ConsumerState<CustomerLayout> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(customerTabIndexProvider.notifier).state = widget.initialIndex;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final selectedIndex = ref.watch(customerTabIndexProvider);
+    final user = ref.watch(currentUserDetailsProvider);
+    final isDesktop = MediaQuery.of(context).size.width > 800;
+
+    // List of screens corresponding to the tab index
+    final List<Widget> screens = [
+      const HomeScreen(isEmbedded: true), // Tell HomeScreen it is embedded inside layout
+      const ProductsView(),
+      const WishlistView(),
+      const OrdersView(),
+      const ProfileScreen(isEmbedded: true), // Tell ProfileScreen it is embedded
+    ];
+
+    return Scaffold(
+      appBar: isDesktop ? _buildDesktopHeader(context, selectedIndex, user) : null,
+      body: screens[selectedIndex],
+      bottomNavigationBar: isDesktop
+          ? null
+          : Container(
+              decoration: const BoxDecoration(
+                border: Border(
+                  top: BorderSide(color: Color(0xFF05372B), width: 1.5),
+                ),
+              ),
+              child: BottomNavigationBar(
+                currentIndex: selectedIndex,
+                onTap: (index) {
+                  ref.read(customerTabIndexProvider.notifier).state = index;
+                },
+                backgroundColor: Theme.of(context).colorScheme.surface,
+                selectedItemColor: Theme.of(context).colorScheme.primary,
+                unselectedItemColor: Colors.white.withOpacity(0.6),
+                type: BottomNavigationBarType.fixed,
+                showUnselectedLabels: true,
+                selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
+                unselectedLabelStyle: const TextStyle(fontSize: 11),
+                items: const [
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.home_outlined),
+                    activeIcon: Icon(Icons.home),
+                    label: 'Home',
+                  ),
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.grid_view_outlined),
+                    activeIcon: Icon(Icons.grid_view),
+                    label: 'Products',
+                  ),
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.favorite_border),
+                    activeIcon: Icon(Icons.favorite),
+                    label: 'Wishlist',
+                  ),
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.receipt_long_outlined),
+                    activeIcon: Icon(Icons.receipt_long),
+                    label: 'Orders',
+                  ),
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.person_outline),
+                    activeIcon: Icon(Icons.person),
+                    label: 'Account',
+                  ),
+                ],
+              ),
+            ),
+    );
+  }
+
+  PreferredSizeWidget _buildDesktopHeader(BuildContext context, int selectedIndex, user) {
+    return AppBar(
+      title: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: const BoxDecoration(
+              color: Color(0xFFC6A473),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.storefront_outlined, color: Color(0xFF011E16), size: 20),
+          ),
+          const SizedBox(width: 10),
+          const Text(
+            'Al Ruby Perfumes',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.white, letterSpacing: 0.5),
+          ),
+        ],
+      ),
+      actions: [
+        // Navigation Buttons
+        _buildNavButton(context, 0, 'Home', selectedIndex == 0),
+        _buildNavButton(context, 1, 'Products', selectedIndex == 1),
+        _buildNavButton(context, 2, 'Wishlist', selectedIndex == 2),
+        _buildNavButton(context, 3, 'My Orders', selectedIndex == 3),
+        _buildNavButton(context, 4, 'My Account', selectedIndex == 4),
+        
+        const SizedBox(width: 16),
+        // Cart Icon
+        IconButton(
+          icon: const Icon(Icons.shopping_bag_outlined, color: Colors.white),
+          onPressed: () => context.push('/cart'),
+        ),
+        if (user?.role == 'admin') ...[
+          const SizedBox(width: 8),
+          OutlinedButton.icon(
+            onPressed: () => context.go('/admin'),
+            icon: const Icon(Icons.admin_panel_settings_outlined, size: 18),
+            label: const Text('Admin Panel'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: const Color(0xFFC6A473),
+              side: const BorderSide(color: Color(0xFFC6A473)),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            ),
+          ),
+        ],
+        const SizedBox(width: 16),
+      ],
+    );
+  }
+
+  Widget _buildNavButton(BuildContext context, int index, String label, bool isSelected) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4.0),
+      child: TextButton(
+        onPressed: () {
+          ref.read(customerTabIndexProvider.notifier).state = index;
+        },
+        style: TextButton.styleFrom(
+          foregroundColor: isSelected ? const Color(0xFFC6A473) : Colors.white.withOpacity(0.8),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            fontSize: 15,
+          ),
+        ),
+      ),
+    );
+  }
+}

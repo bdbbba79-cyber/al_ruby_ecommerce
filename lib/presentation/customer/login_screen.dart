@@ -68,7 +68,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final businessInfoAsync = ref.watch(businessInfoProvider);
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.background,
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
@@ -93,7 +93,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     style: TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF0F172A),
+                      color: Colors.white,
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -102,7 +102,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     'Sign in to access your profile and track orders.',
                     style: TextStyle(
                       fontSize: 14,
-                      color: Color(0xFF64748B),
+                      color: Colors.grey,
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -111,13 +111,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.red.shade50,
+                        color: Colors.red.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.red.shade200),
+                        border: Border.all(color: Colors.red.withOpacity(0.5)),
                       ),
                       child: Text(
                         _errorMessage!,
-                        style: TextStyle(color: Colors.red.shade800, fontSize: 13),
+                        style: const TextStyle(color: Colors.red, fontSize: 13),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -125,6 +125,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   TextFormField(
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
+                    style: const TextStyle(color: Colors.white),
                     decoration: const InputDecoration(
                       hintText: 'Email Address',
                       prefixIcon: Icon(Icons.email_outlined),
@@ -139,6 +140,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   TextFormField(
                     controller: _passwordController,
                     obscureText: true,
+                    style: const TextStyle(color: Colors.white),
                     decoration: const InputDecoration(
                       hintText: 'Password',
                       prefixIcon: Icon(Icons.lock_outlined),
@@ -154,7 +156,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     child: TextButton(
                       onPressed: () => context.push('/forgot-password'),
                       style: TextButton.styleFrom(
-                        foregroundColor: const Color(0xFF0F62FE),
+                        foregroundColor: Theme.of(context).colorScheme.primary,
                       ),
                       child: const Text('Forgot Password?'),
                     ),
@@ -162,10 +164,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   const SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: _isLoading ? null : _login,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0F62FE),
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                    ),
                     child: _isLoading
                         ? const SizedBox(
                             height: 20,
@@ -180,12 +178,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     children: [
                       const Text(
                         "Don't have an account? ",
-                        style: TextStyle(color: Color(0xFF64748B)),
+                        style: TextStyle(color: Colors.grey),
                       ),
                       TextButton(
                         onPressed: () => context.push('/register'),
                         style: TextButton.styleFrom(
-                          foregroundColor: const Color(0xFF0F62FE),
+                          foregroundColor: Theme.of(context).colorScheme.primary,
                         ),
                         child: const Text('Register'),
                       ),
@@ -195,7 +193,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   TextButton(
                     onPressed: () => context.go('/home'),
                     style: TextButton.styleFrom(
-                      foregroundColor: const Color(0xFF64748B),
+                      foregroundColor: Colors.grey,
                     ),
                     child: const Text('Continue as Guest'),
                   ),
@@ -211,10 +209,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget _buildTextLogo(String name) {
     return Text(
       name,
-      style: const TextStyle(
-        fontSize: 32,
+      style: TextStyle(
+        fontSize: 28,
         fontWeight: FontWeight.bold,
-        color: Color(0xFF0F62FE),
+        color: Theme.of(context).colorScheme.primary,
         letterSpacing: 1.5,
       ),
       textAlign: TextAlign.center,

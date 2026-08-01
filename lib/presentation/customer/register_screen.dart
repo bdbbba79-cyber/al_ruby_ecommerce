@@ -78,12 +78,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     final businessInfoAsync = ref.watch(businessInfoProvider);
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.background,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF0F172A)),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => context.pop(),
         ),
       ),
@@ -100,54 +98,55 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 children: [
                   businessInfoAsync.when(
                     data: (info) => info.companyLogoUrl.isNotEmpty
-                        ? Image.network(info.companyLogoUrl, height: 80, fit: BoxFit.contain)
+                        ? Image.network(info.companyLogoUrl, height: 100, fit: BoxFit.contain)
                         : _buildTextLogo(info.companyName),
                     loading: () => const Center(child: CircularProgressIndicator()),
                     error: (_, __) => _buildTextLogo('Al Ruby Perfumes'),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 32),
                   const Text(
                     'Create Account',
                     style: TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF0F172A),
+                      color: Colors.white,
                     ),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Join us to unlock premium shopping experiences.',
+                    'Sign up to start shopping premium perfumes.',
                     style: TextStyle(
                       fontSize: 14,
-                      color: Color(0xFF64748B),
+                      color: Colors.grey,
                     ),
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 32),
                   if (_errorMessage != null) ...[
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.red.shade50,
+                        color: Colors.red.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.red.shade200),
+                        border: Border.all(color: Colors.red.withOpacity(0.5)),
                       ),
                       child: Text(
                         _errorMessage!,
-                        style: TextStyle(color: Colors.red.shade800, fontSize: 13),
+                        style: const TextStyle(color: Colors.red, fontSize: 13),
                       ),
                     ),
                     const SizedBox(height: 16),
                   ],
                   TextFormField(
                     controller: _nameController,
+                    style: const TextStyle(color: Colors.white),
                     decoration: const InputDecoration(
                       hintText: 'Full Name',
                       prefixIcon: Icon(Icons.person_outline),
                     ),
                     validator: (value) {
-                      if (value == null || value.trim().isEmpty) return 'Please enter your name';
+                      if (value == null || value.isEmpty) return 'Please enter your name';
                       return null;
                     },
                   ),
@@ -155,6 +154,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   TextFormField(
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
+                    style: const TextStyle(color: Colors.white),
                     decoration: const InputDecoration(
                       hintText: 'Email Address',
                       prefixIcon: Icon(Icons.email_outlined),
@@ -169,12 +169,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   TextFormField(
                     controller: _passwordController,
                     obscureText: true,
+                    style: const TextStyle(color: Colors.white),
                     decoration: const InputDecoration(
                       hintText: 'Password',
                       prefixIcon: Icon(Icons.lock_outlined),
                     ),
                     validator: (value) {
-                      if (value == null || value.isEmpty) return 'Please enter a password';
+                      if (value == null || value.isEmpty) return 'Please enter your password';
                       if (value.length < 6) return 'Password must be at least 6 characters';
                       return null;
                     },
@@ -183,9 +184,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   TextFormField(
                     controller: _confirmPasswordController,
                     obscureText: true,
+                    style: const TextStyle(color: Colors.white),
                     decoration: const InputDecoration(
                       hintText: 'Confirm Password',
-                      prefixIcon: Icon(Icons.lock_clock_outlined),
+                      prefixIcon: Icon(Icons.lock_outlined),
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) return 'Please confirm your password';
@@ -195,17 +197,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   const SizedBox(height: 24),
                   ElevatedButton(
                     onPressed: _isLoading ? null : _register,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0F62FE),
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                    ),
                     child: _isLoading
                         ? const SizedBox(
                             height: 20,
                             width: 20,
                             child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                           )
-                        : const Text('Create Account'),
+                        : const Text('Sign Up'),
                   ),
                   const SizedBox(height: 24),
                   Row(
@@ -213,12 +211,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     children: [
                       const Text(
                         "Already have an account? ",
-                        style: TextStyle(color: Color(0xFF64748B)),
+                        style: TextStyle(color: Colors.grey),
                       ),
                       TextButton(
                         onPressed: () => context.pop(),
                         style: TextButton.styleFrom(
-                          foregroundColor: const Color(0xFF0F62FE),
+                          foregroundColor: Theme.of(context).colorScheme.primary,
                         ),
                         child: const Text('Sign In'),
                       ),
@@ -236,10 +234,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   Widget _buildTextLogo(String name) {
     return Text(
       name,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 28,
         fontWeight: FontWeight.bold,
-        color: Color(0xFF0F62FE),
+        color: Theme.of(context).colorScheme.primary,
         letterSpacing: 1.5,
       ),
       textAlign: TextAlign.center,

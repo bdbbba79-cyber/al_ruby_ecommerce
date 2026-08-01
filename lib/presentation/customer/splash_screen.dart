@@ -18,7 +18,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   }
 
   Future<void> _checkAuthAndNavigate() async {
-    // Wait for the Firebase Auth to initialize and check session
     await Future.delayed(const Duration(milliseconds: 1500));
     
     if (!mounted) return;
@@ -56,7 +55,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     final businessInfoAsync = ref.watch(businessInfoProvider);
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.background,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -69,11 +68,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
               error: (_, __) => _buildFallbackLogo(),
             ),
             const SizedBox(height: 24),
-            const SizedBox(
+            SizedBox(
               width: 140,
               child: LinearProgressIndicator(
-                color: Color(0xFF0F62FE),
-                backgroundColor: Color(0xFFF1F5F9),
+                color: Theme.of(context).colorScheme.primary,
+                backgroundColor: Theme.of(context).colorScheme.surface,
               ),
             ),
           ],
@@ -89,14 +88,14 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
           height: 100,
           width: 100,
           decoration: BoxDecoration(
-            color: const Color(0xFF0F62FE),
+            color: Theme.of(context).colorScheme.primary,
             borderRadius: BorderRadius.circular(20),
           ),
           alignment: Alignment.center,
           child: const Text(
             'AR',
             style: TextStyle(
-              color: Colors.white,
+              color: Color(0xFF011E16),
               fontSize: 40,
               fontWeight: FontWeight.bold,
             ),
@@ -106,7 +105,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
         const Text(
           'Al Ruby Perfumes',
           style: TextStyle(
-            color: Color(0xFF0F172A),
+            color: Colors.white,
             fontSize: 24,
             fontWeight: FontWeight.bold,
             letterSpacing: 1,

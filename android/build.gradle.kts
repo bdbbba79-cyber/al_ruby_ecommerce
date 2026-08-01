@@ -14,9 +14,14 @@ val newBuildDir: Directory =
 rootProject.layout.buildDirectory.value(newBuildDir)
 
 subprojects {
-    val projectDrive = project.projectDir.absolutePath.substringBefore(":")
-    val buildDrive = newBuildDir.asFile.absolutePath.substringBefore(":")
-    if (projectDrive.equals(buildDrive, ignoreCase = true)) {
+    val projectPath = project.projectDir.absolutePath
+    val buildPath = newBuildDir.asFile.absolutePath
+    val sameDrive = if (projectPath.contains(":") && buildPath.contains(":")) {
+        projectPath.substringBefore(":").equals(buildPath.substringBefore(":"), ignoreCase = true)
+    } else {
+        true
+    }
+    if (sameDrive) {
         val newSubprojectBuildDir: Directory = newBuildDir.dir(project.name)
         project.layout.buildDirectory.value(newSubprojectBuildDir)
     }

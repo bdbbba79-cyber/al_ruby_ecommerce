@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "850326169710",
+    "project_id": "alrubyback",
+    "storage_bucket": "alrubyback.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:850326169710:android:a50b751bef999fbb8dde7f",
+        "android_client_info": {
+          "package_name": "com.alruby.perfumes.al_ruby_ecommerce"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAb6gZCGOjX5X5TUKH_CB2dUPyRIXFx-Xk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

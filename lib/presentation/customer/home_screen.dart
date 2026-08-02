@@ -45,13 +45,46 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // Header Banner Carousel
-            businessInfoAsync.when(
-              data: (info) => _buildHeroBanner(info.activeBanners),
-              loading: () => const SizedBox(height: 280, child: Center(child: CircularProgressIndicator())),
-              error: (_, __) => _buildHeroBanner([]),
+            Center(
+              child: Container(
+                constraints: const BoxConstraints(maxWidth: 1200),
+                padding: EdgeInsets.symmetric(
+                  horizontal: isDesktop ? 16.0 : 12.0,
+                  vertical: isDesktop ? 16.0 : 8.0,
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(isDesktop ? 16 : 12),
+                  child: businessInfoAsync.when(
+                    data: (info) {
+                      final screenWidth = MediaQuery.of(context).size.width;
+                      final double bannerHeight = isDesktop 
+                          ? (screenWidth.clamp(0.0, 1200.0) * 0.32).clamp(280.0, 380.0)
+                          : (screenWidth * 0.45).clamp(150.0, 240.0);
+                      return _buildHeroBanner(info.activeBanners, bannerHeight);
+                    },
+                    loading: () {
+                      final screenWidth = MediaQuery.of(context).size.width;
+                      final double bannerHeight = isDesktop 
+                          ? (screenWidth.clamp(0.0, 1200.0) * 0.32).clamp(280.0, 380.0)
+                          : (screenWidth * 0.45).clamp(150.0, 240.0);
+                      return SizedBox(
+                        height: bannerHeight, 
+                        child: const Center(child: CircularProgressIndicator()),
+                      );
+                    },
+                    error: (_, __) {
+                      final screenWidth = MediaQuery.of(context).size.width;
+                      final double bannerHeight = isDesktop 
+                          ? (screenWidth.clamp(0.0, 1200.0) * 0.32).clamp(280.0, 380.0)
+                          : (screenWidth * 0.45).clamp(150.0, 240.0);
+                      return _buildHeroBanner([], bannerHeight);
+                    },
+                  ),
+                ),
+              ),
             ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 12),
 
             // Content Container
             Padding(
@@ -310,16 +343,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   // --- Hero Section ---
-  Widget _buildHeroBanner(List<HomeBanner> banners) {
+  Widget _buildHeroBanner(List<HomeBanner> banners, double height) {
     if (banners.isNotEmpty) {
       return SizedBox(
-        height: 280,
+        height: height,
         child: AutoScrollingBanner(banners: banners),
       );
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 24),
+      height: height,
+      padding: EdgeInsets.symmetric(
+        vertical: height > 240 ? 36.0 : 16.0,
+        horizontal: height > 240 ? 24.0 : 16.0,
+      ),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         gradient: const LinearGradient(
@@ -334,40 +371,51 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text(
+                  Text(
                     'Feel the\nLuxury in\nEvery Spray',
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 32,
+                      fontSize: height > 240 ? 32 : 18,
                       fontWeight: FontWeight.bold,
                       height: 1.2,
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: height > 240 ? 16 : 8),
                   ElevatedButton(
                     onPressed: () {
                       ref.read(customerTabIndexProvider.notifier).state = 1; // Swap to Products tab
                     },
                     style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: height > 240 ? 20 : 12,
+                        vertical: height > 240 ? 12 : 6,
+                      ),
                     ),
-                    child: const Text('SHOP NOW'),
+                    child: Text(
+                      'SHOP NOW',
+                      style: TextStyle(fontSize: height > 240 ? 14 : 10),
+                    ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(width: 24),
+            const SizedBox(width: 16),
             // Premium Gold Perfume Bottle Graphic Placeholder
             Container(
-              height: 160,
-              width: 120,
+              height: height * 0.7,
+              width: height * 0.5,
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.03),
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: Theme.of(context).colorScheme.primary.withOpacity(0.2)),
               ),
-              child: Icon(Icons.local_florist, color: Theme.of(context).colorScheme.primary, size: 60),
+              child: Icon(
+                Icons.local_florist,
+                color: Theme.of(context).colorScheme.primary,
+                size: height * 0.3,
+              ),
             ),
           ],
         ),
@@ -731,8 +779,9 @@ class _AutoScrollingBannerState extends State<AutoScrollingBanner> {
             color: const Color(0xFF01140E),
             child: Image.network(
               banner.imageUrl,
-              fit: BoxFit.contain,
+              fit: BoxFit.cover,
               width: double.infinity,
+              height: double.infinity,
               errorBuilder: (_, __, ___) => const Center(
                 child: Icon(Icons.broken_image, color: Colors.white30, size: 40),
               ),

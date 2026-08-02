@@ -7,8 +7,11 @@ import 'package:al_ruby_ecommerce/core/routing/router.dart';
 import 'package:al_ruby_ecommerce/presentation/widgets/offline_wrapper.dart';
 import 'package:al_ruby_ecommerce/presentation/providers/providers.dart';
 import 'package:al_ruby_ecommerce/data/models/user_model.dart';
+import 'package:al_ruby_ecommerce/core/routing/url_strategy.dart'
+    if (dart.library.html) 'package:al_ruby_ecommerce/core/routing/url_strategy_web.dart';
 
 void main() async {
+  configureUrlStrategy();
   WidgetsFlutterBinding.ensureInitialized();
   
   // Try initializing Firebase, log error but allow running (for local UI development)

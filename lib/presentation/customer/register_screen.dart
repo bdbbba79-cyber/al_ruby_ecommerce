@@ -51,8 +51,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
       ref.read(currentUserDetailsProvider.notifier).state = userModel;
 
-      // Init empty wishlist
+      // Init empty wishlist & cart
       ref.read(wishlistProvider.notifier).loadWishlist([], []);
+      ref.read(cartProvider.notifier).clear();
 
       if (!mounted) return;
       if (userModel.role == 'admin') {

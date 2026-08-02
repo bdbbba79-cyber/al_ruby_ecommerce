@@ -127,12 +127,14 @@ class CartNotifier extends StateNotifier<List<CartItem>> {
         )
       ];
     }
+    _syncWithFirebase();
   }
 
   void removeItem(Product product, {String? selectedVariantSize}) {
     state = state.where((item) =>
         !(item.product.id == product.id &&
           item.selectedVariantSize == selectedVariantSize)).toList();
+    _syncWithFirebase();
   }
 
   void updateQuantity(Product product, int quantity, {String? selectedVariantSize}) {
@@ -147,10 +149,40 @@ class CartNotifier extends StateNotifier<List<CartItem>> {
         else
           item
     ];
+    _syncWithFirebase();
   }
 
   void clear() {
     state = [];
+    _syncWithFirebase();
+  }
+
+  void loadCart(List<Product> products, List<Map<String, dynamic>> savedCart) {
+    state = savedCart.map((map) {
+      final productId = map['productId'] ?? '';
+      final matching = products.where((p) => p.id == productId);
+      if (matching.isEmpty) return null;
+      return CartItem(
+        product: matching.first,
+        quantity: map['quantity'] ?? 1,
+        selectedVariantSize: map['selectedVariantSize'],
+        referrerCode: map['referrerCode'],
+      );
+    }).whereType<CartItem>().toList();
+  }
+
+  void _syncWithFirebase() {
+    final details = _ref.read(currentUserDetailsProvider);
+    if (details != null) {
+      final cartList = state.map((item) => {
+        'productId': item.product.id,
+        'quantity': item.quantity,
+        'selectedVariantSize': item.selectedVariantSize,
+        'referrerCode': item.referrerCode,
+      }).toList();
+      _ref.read(authRepoProvider).updateCart(details.id, cartList);
+      _ref.read(currentUserDetailsProvider.notifier).state = details.copyWith(cart: cartList);
+    }
   }
 
   double get subtotal => state.fold(0, (sum, item) => sum + item.totalPrice);

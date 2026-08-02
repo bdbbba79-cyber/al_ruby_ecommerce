@@ -50,9 +50,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
       ref.read(currentUserDetailsProvider.notifier).state = userModel;
 
-      // Sync wishlist
+      // Sync wishlist & cart
       final products = await ref.read(storeRepoProvider).getProducts(activeOnly: false);
       ref.read(wishlistProvider.notifier).loadWishlist(products, userModel.wishlist);
+      ref.read(cartProvider.notifier).loadCart(products, userModel.cart);
 
       if (!mounted) return;
       if (userModel.role == 'admin') {

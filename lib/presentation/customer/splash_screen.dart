@@ -45,9 +45,10 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
       if (userDetails != null) {
         ref.read(currentUserDetailsProvider.notifier).state = userDetails;
         
-        // Sync wishlist
+        // Sync wishlist & cart
         final products = await ref.read(storeRepoProvider).getProducts(activeOnly: false);
         ref.read(wishlistProvider.notifier).loadWishlist(products, userDetails.wishlist);
+        ref.read(cartProvider.notifier).loadCart(products, userDetails.cart);
 
         if (userDetails.role == 'admin') {
           context.go('/admin');

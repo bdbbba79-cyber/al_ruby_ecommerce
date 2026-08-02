@@ -120,6 +120,7 @@ class AdminLayout extends ConsumerWidget {
             onPressed: () async {
               await ref.read(authRepoProvider).signOut();
               ref.read(currentUserDetailsProvider.notifier).state = null;
+              ref.read(cartProvider.notifier).clear();
               context.go('/home');
             },
           ),

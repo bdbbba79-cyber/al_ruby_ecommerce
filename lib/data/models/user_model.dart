@@ -4,6 +4,7 @@ class UserModel {
   final String email;
   final String role; // 'admin' or 'customer'
   final List<String> wishlist;
+  final List<Map<String, dynamic>> cart;
   
   // Marketing & Commission details
   final String phoneNumber;
@@ -13,20 +14,21 @@ class UserModel {
   final String referralCode;
   final bool withdrawalRequested;
   final double withdrawalRequestedAmount;
-
+ 
   // Saved Address Details
   final String savedHouseStreet;
   final String savedCity;
   final String savedDistrict;
   final String savedState;
   final String savedPinCode;
-
+ 
   UserModel({
     required this.id,
     required this.name,
     required this.email,
     required this.role,
     required this.wishlist,
+    this.cart = const [],
     this.phoneNumber = '',
     this.upiId = '',
     this.totalEarned = 0.0,
@@ -40,16 +42,16 @@ class UserModel {
     this.savedState = '',
     this.savedPinCode = '',
   });
-
+ 
   double get walletBalance => totalEarned - totalPaid;
-
+ 
   static String generateReferralCode(String name, String uid) {
     final cleanName = name.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '').toUpperCase();
     final prefix = cleanName.length > 4 ? cleanName.substring(0, 4) : (cleanName.isEmpty ? 'USER' : cleanName);
     final suffix = uid.length > 4 ? uid.substring(uid.length - 4) : uid;
     return '$prefix$suffix'.toUpperCase();
   }
-
+ 
   factory UserModel.fromMap(String id, Map<String, dynamic> map) {
     final name = map['name'] ?? '';
     final refCode = map['referralCode'] ?? generateReferralCode(name, id);
@@ -59,6 +61,9 @@ class UserModel {
       email: map['email'] ?? '',
       role: map['role'] ?? 'customer',
       wishlist: List<String>.from(map['wishlist'] ?? []),
+      cart: List<Map<String, dynamic>>.from(
+        (map['cart'] as List?)?.map((e) => Map<String, dynamic>.from(e)) ?? []
+      ),
       phoneNumber: map['phoneNumber'] ?? '',
       upiId: map['upiId'] ?? '',
       totalEarned: (map['totalEarned'] as num?)?.toDouble() ?? 0.0,
@@ -73,13 +78,14 @@ class UserModel {
       savedPinCode: map['savedPinCode'] ?? '',
     );
   }
-
+ 
   Map<String, dynamic> toMap() {
     return {
       'name': name,
       'email': email,
       'role': role,
       'wishlist': wishlist,
+      'cart': cart,
       'phoneNumber': phoneNumber,
       'upiId': upiId,
       'totalEarned': totalEarned,
@@ -101,6 +107,7 @@ class UserModel {
     String? email,
     String? role,
     List<String>? wishlist,
+    List<Map<String, dynamic>>? cart,
     String? phoneNumber,
     String? upiId,
     double? totalEarned,
@@ -120,6 +127,7 @@ class UserModel {
       email: email ?? this.email,
       role: role ?? this.role,
       wishlist: wishlist ?? this.wishlist,
+      cart: cart ?? this.cart,
       phoneNumber: phoneNumber ?? this.phoneNumber,
       upiId: upiId ?? this.upiId,
       totalEarned: totalEarned ?? this.totalEarned,

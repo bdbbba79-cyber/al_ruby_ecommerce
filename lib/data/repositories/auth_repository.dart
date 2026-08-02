@@ -50,6 +50,7 @@ class AuthRepository {
       email: email,
       role: role,
       wishlist: [],
+      cart: [],
       referralCode: UserModel.generateReferralCode(name, user.uid),
     );
 
@@ -78,6 +79,7 @@ class AuthRepository {
       email: email,
       role: email.trim().toLowerCase() == 'admin@alruby.com' ? 'admin' : 'customer',
       wishlist: [],
+      cart: [],
       referralCode: UserModel.generateReferralCode(name, user.uid),
     );
     await _firestore.collection('users').doc(user.uid).set(userModel.toMap());
@@ -95,6 +97,12 @@ class AuthRepository {
   Future<void> updateWishlist(String uid, List<String> wishlist) async {
     await _firestore.collection('users').doc(uid).update({
       'wishlist': wishlist,
+    });
+  }
+
+  Future<void> updateCart(String uid, List<Map<String, dynamic>> cart) async {
+    await _firestore.collection('users').doc(uid).update({
+      'cart': cart,
     });
   }
 

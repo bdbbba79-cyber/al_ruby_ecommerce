@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:al_ruby_ecommerce/presentation/providers/providers.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -22,6 +23,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  Future<void> _launchWhatsApp(String number) async {
+    const text = 'Hello Al Ruby Perfumes, I need a help.';
+    final url = 'https://wa.me/$number?text=${Uri.encodeComponent(text)}';
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
   }
 
   Future<void> _login() async {
@@ -196,6 +206,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       foregroundColor: Colors.grey,
                     ),
                     child: const Text('Continue as Guest'),
+                  ),
+                  const SizedBox(height: 16),
+                  businessInfoAsync.when(
+                    data: (info) => Center(
+                      child: TextButton.icon(
+                        onPressed: () => _launchWhatsApp(info.whatsappNumber),
+                        icon: const Icon(Icons.chat, color: Color(0xFF25D366), size: 20),
+                        label: const Text(
+                          'Need help? Chat with Support',
+                          style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                    loading: () => const SizedBox.shrink(),
+                    error: (_, __) => const SizedBox.shrink(),
                   ),
                 ],
               ),

@@ -1,3 +1,35 @@
+class ProductVariant {
+  final String size; // e.g. "50 ml", "100 ml", "10 Inches", "2 L"
+  final double mrp;
+  final double sellingPrice;
+  final int stock;
+
+  ProductVariant({
+    required this.size,
+    required this.mrp,
+    required this.sellingPrice,
+    required this.stock,
+  });
+
+  factory ProductVariant.fromMap(Map<String, dynamic> map) {
+    return ProductVariant(
+      size: map['size'] ?? '',
+      mrp: (map['mrp'] as num?)?.toDouble() ?? 0.0,
+      sellingPrice: (map['sellingPrice'] as num?)?.toDouble() ?? 0.0,
+      stock: map['stock'] as int? ?? 0,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'size': size,
+      'mrp': mrp,
+      'sellingPrice': sellingPrice,
+      'stock': stock,
+    };
+  }
+}
+
 class Product {
   final String id;
   final String name;
@@ -7,11 +39,13 @@ class Product {
   final String description;
   final double mrp;
   final double sellingPrice;
-  final double discount; // discount percentage or flat amount, let's store it as double value
+  final double discount; // discount percentage or flat amount
   final int stock;
   final List<String> images;
   final Map<String, String> specifications;
   final String status; // 'active' or 'inactive'
+  final List<ProductVariant> variants;
+  final double shippingFee;
 
   Product({
     required this.id,
@@ -27,6 +61,8 @@ class Product {
     required this.images,
     required this.specifications,
     required this.status,
+    this.variants = const [],
+    this.shippingFee = 0.0,
   });
 
   factory Product.fromMap(String id, Map<String, dynamic> map) {
@@ -44,6 +80,11 @@ class Product {
       images: List<String>.from(map['images'] ?? []),
       specifications: Map<String, String>.from(map['specifications'] ?? {}),
       status: map['status'] ?? 'active',
+      variants: (map['variants'] as List?)
+              ?.map((v) => ProductVariant.fromMap(Map<String, dynamic>.from(v)))
+              .toList() ??
+          [],
+      shippingFee: (map['shippingFee'] as num?)?.toDouble() ?? 0.0,
     );
   }
 
@@ -61,6 +102,8 @@ class Product {
       'images': images,
       'specifications': specifications,
       'status': status,
+      'variants': variants.map((v) => v.toMap()).toList(),
+      'shippingFee': shippingFee,
     };
   }
 
@@ -78,6 +121,8 @@ class Product {
     List<String>? images,
     Map<String, String>? specifications,
     String? status,
+    List<ProductVariant>? variants,
+    double? shippingFee,
   }) {
     return Product(
       id: id ?? this.id,
@@ -93,6 +138,8 @@ class Product {
       images: images ?? this.images,
       specifications: specifications ?? this.specifications,
       status: status ?? this.status,
+      variants: variants ?? this.variants,
+      shippingFee: shippingFee ?? this.shippingFee,
     );
   }
 }

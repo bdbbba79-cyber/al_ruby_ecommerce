@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:al_ruby_ecommerce/presentation/providers/providers.dart';
+import 'package:al_ruby_ecommerce/data/models/business_info.dart';
 
 // Tab Views
 import 'package:al_ruby_ecommerce/presentation/customer/home_screen.dart';
@@ -33,6 +34,7 @@ class _CustomerLayoutState extends ConsumerState<CustomerLayout> {
   Widget build(BuildContext context) {
     final selectedIndex = ref.watch(customerTabIndexProvider);
     final user = ref.watch(currentUserDetailsProvider);
+    final businessInfo = ref.watch(businessInfoProvider).value;
     final isDesktop = MediaQuery.of(context).size.width > 800;
 
     // List of screens corresponding to the tab index
@@ -45,7 +47,7 @@ class _CustomerLayoutState extends ConsumerState<CustomerLayout> {
     ];
 
     return Scaffold(
-      appBar: isDesktop ? _buildDesktopHeader(context, selectedIndex, user) : null,
+      appBar: isDesktop ? _buildDesktopHeader(context, selectedIndex, user, businessInfo) : null,
       body: screens[selectedIndex],
       bottomNavigationBar: isDesktop
           ? null
@@ -99,23 +101,25 @@ class _CustomerLayoutState extends ConsumerState<CustomerLayout> {
     );
   }
 
-  PreferredSizeWidget _buildDesktopHeader(BuildContext context, int selectedIndex, user) {
+  PreferredSizeWidget _buildDesktopHeader(BuildContext context, int selectedIndex, user, BusinessInfo? businessInfo) {
     return AppBar(
       title: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            padding: const EdgeInsets.all(6),
-            decoration: const BoxDecoration(
-              color: Color(0xFFC6A473),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.storefront_outlined, color: Color(0xFF011E16), size: 20),
-          ),
+          if (businessInfo?.companyLogoUrl != null && businessInfo!.companyLogoUrl.isNotEmpty)
+            Image.network(
+              businessInfo.companyLogoUrl,
+              height: 32,
+              width: 32,
+              fit: BoxFit.contain,
+              errorBuilder: (_, __, ___) => Image.asset('assets/logo/favicon.png', height: 32, width: 32),
+            )
+          else
+            Image.asset('assets/logo/favicon.png', height: 32, width: 32),
           const SizedBox(width: 10),
-          const Text(
-            'Al Ruby Perfumes',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.white, letterSpacing: 0.5),
+          Text(
+            businessInfo?.companyName ?? 'Al Ruby Perfumes',
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.white, letterSpacing: 0.5),
           ),
         ],
       ),

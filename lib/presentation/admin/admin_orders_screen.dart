@@ -31,6 +31,11 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> with Sing
   }
 
   Future<void> _generateAndPrintInvoice(OrderModel order) async {
+    final businessInfo = ref.read(businessInfoProvider).value;
+    final companyName = businessInfo?.companyName ?? 'Al Ruby Perfumes';
+    final address = businessInfo?.address ?? 'Erumathadam Malappuram';
+    final mobileNumber = businessInfo?.mobileNumber ?? '9400859846';
+
     final pdf = pw.Document();
 
     pdf.addPage(
@@ -56,9 +61,9 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> with Sing
                     pw.Column(
                       crossAxisAlignment: pw.CrossAxisAlignment.end,
                       children: [
-                        pw.Text('Al Ruby Perfumes', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
-                        pw.Text('Erumathadam Malappuram', style: const pw.TextStyle(fontSize: 10)),
-                        pw.Text('Phone: 9400859846', style: const pw.TextStyle(fontSize: 10)),
+                        pw.Text(companyName, style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+                        pw.Text(address, style: const pw.TextStyle(fontSize: 10)),
+                        pw.Text('Phone: $mobileNumber', style: const pw.TextStyle(fontSize: 10)),
                       ],
                     ),
                   ],

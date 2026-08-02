@@ -22,6 +22,18 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     
     if (!mounted) return;
 
+    // If the user has already navigated away (e.g., deep linking on boot), abort redirect
+    try {
+      final router = GoRouter.of(context);
+      final currentPath = router.routerDelegate.currentConfiguration.uri.path;
+      if (currentPath != '/') {
+        debugPrint("Splash screen redirect aborted: current path is $currentPath");
+        return;
+      }
+    } catch (e) {
+      debugPrint("Error checking splash path: $e");
+    }
+
     final authUser = ref.read(authRepoProvider).currentUser;
     if (authUser == null) {
       context.go('/home');
@@ -63,9 +75,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
             businessInfoAsync.when(
               data: (info) => info.companyLogoUrl.isNotEmpty
                   ? Image.network(info.companyLogoUrl, height: 160, width: 160, fit: BoxFit.contain)
-                  : _buildFallbackLogo(),
+                  : _buildFallbackLogo(info.companyName),
               loading: () => const CircularProgressIndicator(),
-              error: (_, __) => _buildFallbackLogo(),
+              error: (_, __) => _buildFallbackLogo(null),
             ),
             const SizedBox(height: 24),
             SizedBox(
@@ -81,7 +93,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     );
   }
 
-  Widget _buildFallbackLogo() {
+  Widget _buildFallbackLogo(String? name) {
     return Column(
       children: [
         Container(
@@ -102,9 +114,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        const Text(
-          'Al Ruby Perfumes',
-          style: TextStyle(
+        Text(
+          name ?? 'Al Ruby Perfumes',
+          style: const TextStyle(
             color: Colors.white,
             fontSize: 24,
             fontWeight: FontWeight.bold,

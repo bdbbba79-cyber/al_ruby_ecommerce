@@ -41,7 +41,7 @@ class WhatsappSupportView extends ConsumerWidget {
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
-                    Icons.whatsapp,
+                    Icons.chat_bubble,
                     size: 80,
                     color: Colors.white,
                   ),
@@ -71,7 +71,7 @@ class WhatsappSupportView extends ConsumerWidget {
                 businessInfoAsync.when(
                   data: (info) => ElevatedButton.icon(
                     onPressed: () => _launchWhatsApp(info.whatsappNumber),
-                    icon: const Icon(Icons.whatsapp, size: 24),
+                    icon: const Icon(Icons.chat, size: 24),
                     label: const Text('CHAT ON WHATSAPP'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF25D366),
@@ -83,7 +83,7 @@ class WhatsappSupportView extends ConsumerWidget {
                   loading: () => const Center(child: CircularProgressIndicator()),
                   error: (_, __) => ElevatedButton.icon(
                     onPressed: () => _launchWhatsApp('+919998887776'),
-                    icon: const Icon(Icons.whatsapp, size: 24),
+                    icon: const Icon(Icons.chat, size: 24),
                     label: const Text('CHAT ON WHATSAPP'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF25D366),

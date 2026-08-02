@@ -4,6 +4,9 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:al_ruby_ecommerce/firebase_options.dart';
 import 'package:al_ruby_ecommerce/core/theme/theme.dart';
 import 'package:al_ruby_ecommerce/core/routing/router.dart';
+import 'package:al_ruby_ecommerce/presentation/widgets/offline_wrapper.dart';
+import 'package:al_ruby_ecommerce/presentation/providers/providers.dart';
+import 'package:al_ruby_ecommerce/data/models/user_model.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -33,11 +36,21 @@ class AlRubyApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
 
+    // Automatically sync the user authentication details into the StateProvider
+    ref.listen<AsyncValue<UserModel?>>(userDetailsProvider, (previous, next) {
+      if (next is AsyncData<UserModel?>) {
+        ref.read(currentUserDetailsProvider.notifier).state = next.value;
+      }
+    });
+
     return MaterialApp.router(
       title: 'Al Ruby Perfumes',
       theme: AppTheme.lightTheme,
       routerConfig: router,
       debugShowCheckedModeBanner: false,
+      builder: (context, child) {
+        return OfflineWrapper(child: child ?? const SizedBox());
+      },
     );
   }
 }

@@ -47,57 +47,102 @@ final adminProductsProvider = StreamProvider<List<Product>>((ref) {
   return ref.watch(storeRepoProvider).watchProducts(activeOnly: false);
 });
 
-final bannersProvider = StreamProvider<List<String>>((ref) {
-  return ref.watch(storeRepoProvider).watchBanners();
-});
+
+// --- Referral State ---
+// Mappings of productId to the referral code used to visit the product
+final productReferralsProvider = StateProvider<Map<String, String>>((ref) => {});
 
 // --- Cart State ---
 class CartItem {
   final Product product;
   final int quantity;
+  final String? selectedVariantSize;
+  final String? referrerCode;
 
-  CartItem({required this.product, required this.quantity});
+  CartItem({
+    required this.product,
+    required this.quantity,
+    this.selectedVariantSize,
+    this.referrerCode,
+  });
 
-  CartItem copyWith({Product? product, int? quantity}) {
+  CartItem copyWith({
+    Product? product,
+    int? quantity,
+    String? selectedVariantSize,
+    String? referrerCode,
+  }) {
     return CartItem(
       product: product ?? this.product,
       quantity: quantity ?? this.quantity,
+      selectedVariantSize: selectedVariantSize ?? this.selectedVariantSize,
+      referrerCode: referrerCode ?? this.referrerCode,
     );
   }
 
-  double get totalPrice => product.sellingPrice * quantity;
+  double get unitPrice {
+    if (selectedVariantSize != null && product.variants.isNotEmpty) {
+      final variant = product.variants.firstWhere(
+        (v) => v.size == selectedVariantSize,
+        orElse: () => ProductVariant(size: selectedVariantSize!, mrp: product.mrp, sellingPrice: product.sellingPrice, stock: product.stock),
+      );
+      return variant.sellingPrice;
+    }
+    return product.sellingPrice;
+  }
+
+  double get totalPrice => unitPrice * quantity;
 }
 
 class CartNotifier extends StateNotifier<List<CartItem>> {
-  CartNotifier() : super([]);
+  final Ref _ref;
+  CartNotifier(this._ref) : super([]);
 
-  void addItem(Product product) {
-    final index = state.indexWhere((item) => item.product.id == product.id);
+  void addItem(Product product, {String? selectedVariantSize, String? referrerCode}) {
+    // Determine the referral code automatically if not explicitly provided
+    final resolvedReferrerCode = referrerCode ?? _ref.read(productReferralsProvider)[product.id];
+
+    final index = state.indexWhere((item) =>
+        item.product.id == product.id &&
+        item.selectedVariantSize == selectedVariantSize);
     if (index >= 0) {
       state = [
         for (int i = 0; i < state.length; i++)
           if (i == index)
-            state[i].copyWith(quantity: state[i].quantity + 1)
+            state[i].copyWith(
+              quantity: state[i].quantity + 1,
+              referrerCode: resolvedReferrerCode ?? state[i].referrerCode,
+            )
           else
             state[i]
       ];
     } else {
-      state = [...state, CartItem(product: product, quantity: 1)];
+      state = [
+        ...state,
+        CartItem(
+          product: product,
+          quantity: 1,
+          selectedVariantSize: selectedVariantSize,
+          referrerCode: resolvedReferrerCode,
+        )
+      ];
     }
   }
 
-  void removeItem(Product product) {
-    state = state.where((item) => item.product.id != product.id).toList();
+  void removeItem(Product product, {String? selectedVariantSize}) {
+    state = state.where((item) =>
+        !(item.product.id == product.id &&
+          item.selectedVariantSize == selectedVariantSize)).toList();
   }
 
-  void updateQuantity(Product product, int quantity) {
+  void updateQuantity(Product product, int quantity, {String? selectedVariantSize}) {
     if (quantity <= 0) {
-      removeItem(product);
+      removeItem(product, selectedVariantSize: selectedVariantSize);
       return;
     }
     state = [
       for (final item in state)
-        if (item.product.id == product.id)
+        if (item.product.id == product.id && item.selectedVariantSize == selectedVariantSize)
           item.copyWith(quantity: quantity)
         else
           item
@@ -109,10 +154,13 @@ class CartNotifier extends StateNotifier<List<CartItem>> {
   }
 
   double get subtotal => state.fold(0, (sum, item) => sum + item.totalPrice);
+  double get shippingFee => state.fold(0.0, (sum, item) => sum + (item.product.shippingFee * item.quantity));
 }
 
+final appliedCouponProvider = StateProvider<String?>((ref) => null);
+
 final cartProvider = StateNotifierNotifierProvider<CartNotifier, List<CartItem>>((ref) {
-  return CartNotifier();
+  return CartNotifier(ref);
 });
 
 // Helper for Riverpod 2 StateNotifierProvider syntax
@@ -160,4 +208,8 @@ final customerOrdersProvider = StreamProvider<List<OrderModel>>((ref) {
 
 final adminOrdersProvider = StreamProvider<List<OrderModel>>((ref) {
   return ref.watch(orderRepoProvider).watchAllOrders();
+});
+
+final adminUsersProvider = StreamProvider<List<UserModel>>((ref) {
+  return ref.watch(authRepoProvider).watchAllUsers();
 });

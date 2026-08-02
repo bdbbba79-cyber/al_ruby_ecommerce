@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -15,6 +14,7 @@ import 'package:al_ruby_ecommerce/presentation/admin/admin_products_screen.dart'
 import 'package:al_ruby_ecommerce/presentation/admin/admin_categories_screen.dart';
 import 'package:al_ruby_ecommerce/presentation/admin/admin_orders_screen.dart';
 import 'package:al_ruby_ecommerce/presentation/admin/admin_settings_screen.dart';
+import 'package:al_ruby_ecommerce/presentation/admin/admin_users_screen.dart';
 import 'package:al_ruby_ecommerce/presentation/providers/providers.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -22,10 +22,6 @@ final routerProvider = Provider<GoRouter>((ref) {
     initialLocation: '/',
     redirect: (context, state) {
       final user = ref.read(currentUserDetailsProvider);
-      final loggingIn = state.matchedLocation == '/login' ||
-          state.matchedLocation == '/register' ||
-          state.matchedLocation == '/forgot-password' ||
-          state.matchedLocation == '/';
 
       // Accessing admin routes
       if (state.matchedLocation.startsWith('/admin')) {
@@ -113,6 +109,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/admin/settings',
         builder: (context, state) => const AdminSettingsScreen(),
+      ),
+      GoRoute(
+        path: '/admin/users',
+        builder: (context, state) => const AdminUsersScreen(),
       ),
     ],
   );

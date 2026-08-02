@@ -89,6 +89,8 @@ class OrderItem {
   final double price;
   final int quantity;
   final String imageUrl;
+  final String? selectedSize;
+  final String? referrerCode;
 
   OrderItem({
     required this.productId,
@@ -96,6 +98,8 @@ class OrderItem {
     required this.price,
     required this.quantity,
     required this.imageUrl,
+    this.selectedSize,
+    this.referrerCode,
   });
 
   factory OrderItem.fromMap(Map<String, dynamic> map) {
@@ -105,6 +109,8 @@ class OrderItem {
       price: (map['price'] as num?)?.toDouble() ?? 0.0,
       quantity: map['quantity'] ?? 1,
       imageUrl: map['imageUrl'] ?? '',
+      selectedSize: map['selectedSize'],
+      referrerCode: map['referrerCode'],
     );
   }
 
@@ -115,6 +121,8 @@ class OrderItem {
       'price': price,
       'quantity': quantity,
       'imageUrl': imageUrl,
+      'selectedSize': selectedSize,
+      'referrerCode': referrerCode,
     };
   }
 }

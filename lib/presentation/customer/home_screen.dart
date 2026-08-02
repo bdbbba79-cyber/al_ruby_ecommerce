@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -29,7 +30,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget build(BuildContext context) {
     final businessInfoAsync = ref.watch(businessInfoProvider);
     final categoriesAsync = ref.watch(categoriesProvider);
-    final bannersAsync = ref.watch(bannersProvider);
     final productsAsync = ref.watch(productsProvider(null));
     final cart = ref.watch(cartProvider);
     final userDetails = ref.watch(currentUserDetailsProvider);
@@ -45,8 +45,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // Header Banner Carousel
-            bannersAsync.when(
-              data: (bannersList) => _buildHeroBanner(bannersList),
+            businessInfoAsync.when(
+              data: (info) => _buildHeroBanner(info.activeBanners),
               loading: () => const SizedBox(height: 280, child: Center(child: CircularProgressIndicator())),
               error: (_, __) => _buildHeroBanner([]),
             ),
@@ -131,8 +131,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  // --- Mobile App Bar ---
   PreferredSizeWidget _buildMobileAppBar(BuildContext context, int cartCount) {
+    final businessInfo = ref.watch(businessInfoProvider).value;
+    final companyName = businessInfo?.companyName ?? 'AL RUBY PERFUMES';
+    final logoUrl = businessInfo?.companyLogoUrl;
+
     return AppBar(
       leading: Builder(
         builder: (context) => IconButton(
@@ -144,11 +147,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.stars, color: Theme.of(context).colorScheme.primary, size: 24),
+          if (logoUrl != null && logoUrl.isNotEmpty)
+            Image.network(
+              logoUrl,
+              height: 24,
+              width: 24,
+              fit: BoxFit.contain,
+              errorBuilder: (_, __, ___) => Image.asset('assets/logo/favicon.png', height: 24, width: 24),
+            )
+          else
+            Image.asset('assets/logo/favicon.png', height: 24, width: 24),
           const SizedBox(width: 8),
-          const Text(
-            'AL RUBY PERFUMES',
-            style: TextStyle(
+          Text(
+            companyName.toUpperCase(),
+            style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
               letterSpacing: 1,
@@ -194,6 +206,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   // --- Mobile Drawer ---
   Widget _buildMobileDrawer(BuildContext context, userDetails) {
     final businessInfoAsync = ref.watch(businessInfoProvider);
+    final businessInfo = businessInfoAsync.value;
+    final companyName = businessInfo?.companyName ?? 'AL RUBY PERFUMES';
+    final logoUrl = businessInfo?.companyLogoUrl;
+
     return Drawer(
       backgroundColor: Theme.of(context).colorScheme.background,
       child: Column(
@@ -207,11 +223,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.stars, color: Theme.of(context).colorScheme.primary, size: 48),
+                  if (logoUrl != null && logoUrl.isNotEmpty)
+                    Image.network(
+                      logoUrl,
+                      height: 48,
+                      width: 48,
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, __, ___) => Image.asset('assets/logo/favicon.png', height: 48, width: 48),
+                    )
+                  else
+                    Image.asset('assets/logo/favicon.png', height: 48, width: 48),
                   const SizedBox(height: 12),
-                  const Text(
-                    'AL RUBY PERFUMES',
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18, letterSpacing: 1),
+                  Text(
+                    companyName.toUpperCase(),
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18, letterSpacing: 1),
                   ),
                 ],
               ),
@@ -270,22 +295,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             loading: () => const SizedBox(),
             error: (_, __) => const SizedBox(),
           ),
+          const Divider(color: Color(0xFF05372B)),
+          ListTile(
+            leading: const Icon(Icons.admin_panel_settings_outlined, color: Colors.orangeAccent),
+            title: const Text('Admin Panel (Temp)', style: TextStyle(color: Colors.orangeAccent)),
+            onTap: () {
+              context.pop();
+              context.go('/admin');
+            },
+          ),
         ],
       ),
     );
   }
 
   // --- Hero Section ---
-  Widget _buildHeroBanner(List<String> banners) {
+  Widget _buildHeroBanner(List<HomeBanner> banners) {
     if (banners.isNotEmpty) {
       return SizedBox(
         height: 280,
-        child: PageView.builder(
-          itemCount: banners.length,
-          itemBuilder: (context, index) {
-            return Image.network(banners[index], fit: BoxFit.cover, width: double.infinity);
-          },
-        ),
+        child: AutoScrollingBanner(banners: banners),
       );
     }
 
@@ -418,8 +447,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   // --- Best Sellers Grid ---
   Widget _buildBestSellersGrid(List<Product> products) {
-    // Show top 3 products
-    final bestSellers = products.where((p) => p.status == 'active').take(3).toList();
+    // Show top 4 products (minimum 4 if available)
+    final bestSellers = products.where((p) => p.status == 'active').take(4).toList();
 
     if (bestSellers.isEmpty) {
       return const Center(
@@ -431,9 +460,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
 
     final screenWidth = MediaQuery.of(context).size.width;
-    int crossAxisCount = 3;
+    int crossAxisCount = 4;
     if (screenWidth < 600) {
-      crossAxisCount = 2; // Grid layout on smaller screens
+      crossAxisCount = 2; // Grid layout on smaller mobile screens
+    } else if (screenWidth < 900) {
+      crossAxisCount = 3; // Grid layout on tablets/medium screens
     }
 
     return GridView.builder(
@@ -517,25 +548,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 4),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            '₹${product.sellingPrice.toStringAsFixed(0)}',
-                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFFC6A473)),
-                          ),
-                          Row(
-                            children: [
-                              const Icon(Icons.star, color: Colors.amber, size: 12),
-                              const SizedBox(width: 2),
-                              Text(
-                                '4.8',
-                                style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 10),
-                              ),
-                            ],
-                          )
-                        ],
+                      Text(
+                        '₹${product.sellingPrice.toStringAsFixed(0)}',
+                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFFC6A473)),
                       ),
                     ],
                   ),
@@ -599,6 +614,44 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           Text(address, style: const TextStyle(color: Colors.grey, fontSize: 13)),
           Text('Phone: $mobile', style: const TextStyle(color: Colors.grey, fontSize: 13)),
           Text('Email: $email', style: const TextStyle(color: Colors.grey, fontSize: 13)),
+          if ((info?.facebookLink != null && info!.facebookLink.isNotEmpty) || 
+              (info?.instagramLink != null && info!.instagramLink.isNotEmpty)) ...[
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                if (info.facebookLink.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 16.0),
+                    child: InkWell(
+                      onTap: () => _launchURL(info.facebookLink),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.facebook, color: Color(0xFFC6A473), size: 20),
+                          const SizedBox(width: 6),
+                          Text('Facebook', style: TextStyle(color: Colors.grey[400], fontSize: 13)),
+                        ],
+                      ),
+                    ),
+                  ),
+                if (info.instagramLink.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 16.0),
+                    child: InkWell(
+                      onTap: () => _launchURL(info.instagramLink),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.camera_alt, color: Color(0xFFC6A473), size: 20),
+                          const SizedBox(width: 6),
+                          Text('Instagram', style: TextStyle(color: Colors.grey[400], fontSize: 13)),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ],
           const Divider(color: Color(0xFF05372B), height: 40),
           Center(
             child: Text(
@@ -616,5 +669,77 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri);
     }
+  }
+}
+
+class AutoScrollingBanner extends StatefulWidget {
+  final List<HomeBanner> banners;
+  const AutoScrollingBanner({super.key, required this.banners});
+
+  @override
+  State<AutoScrollingBanner> createState() => _AutoScrollingBannerState();
+}
+
+class _AutoScrollingBannerState extends State<AutoScrollingBanner> {
+  late final PageController _pageController;
+  Timer? _timer;
+  int _currentPage = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(initialPage: 0);
+    _startTimer();
+  }
+
+  void _startTimer() {
+    _timer = Timer.periodic(const Duration(seconds: 4), (timer) {
+      if (widget.banners.length <= 1) return;
+      if (_pageController.hasClients) {
+        _currentPage = (_currentPage + 1) % widget.banners.length;
+        _pageController.animateToPage(
+          _currentPage,
+          duration: const Duration(milliseconds: 600),
+          curve: Curves.easeInOut,
+        );
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return PageView.builder(
+      controller: _pageController,
+      onPageChanged: (value) {
+        _currentPage = value;
+      },
+      itemCount: widget.banners.length,
+      itemBuilder: (context, index) {
+        final banner = widget.banners[index];
+        return InkWell(
+          onTap: banner.productId != null && banner.productId!.isNotEmpty
+              ? () => context.push('/product/${banner.productId}')
+              : null,
+          child: Container(
+            color: const Color(0xFF01140E),
+            child: Image.network(
+              banner.imageUrl,
+              fit: BoxFit.contain,
+              width: double.infinity,
+              errorBuilder: (_, __, ___) => const Center(
+                child: Icon(Icons.broken_image, color: Colors.white30, size: 40),
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 }

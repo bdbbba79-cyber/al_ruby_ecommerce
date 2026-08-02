@@ -1,3 +1,24 @@
+class HomeBanner {
+  final String imageUrl;
+  final String? productId;
+
+  HomeBanner({required this.imageUrl, this.productId});
+
+  factory HomeBanner.fromMap(Map<String, dynamic> map) {
+    return HomeBanner(
+      imageUrl: map['imageUrl'] ?? '',
+      productId: map['productId'],
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'imageUrl': imageUrl,
+      'productId': productId,
+    };
+  }
+}
+
 class BusinessInfo {
   final String companyName;
   final String companyLogoUrl;
@@ -16,6 +37,13 @@ class BusinessInfo {
   final String refundPolicy;
   final String shippingPolicy;
   final String faviconUrl;
+  final List<String> bannerUrls;
+  final List<HomeBanner> banners;
+  
+  // Coupon configuration
+  final String couponCode;
+  final double couponDiscountPercentage;
+  final List<String> couponProductIds;
 
   BusinessInfo({
     required this.companyName,
@@ -35,7 +63,17 @@ class BusinessInfo {
     this.refundPolicy = '',
     this.shippingPolicy = '',
     this.faviconUrl = '',
+    this.bannerUrls = const [],
+    this.banners = const [],
+    this.couponCode = '',
+    this.couponDiscountPercentage = 0.0,
+    this.couponProductIds = const [],
   });
+
+  List<HomeBanner> get activeBanners {
+    if (banners.isNotEmpty) return banners;
+    return bannerUrls.map((url) => HomeBanner(imageUrl: url)).toList();
+  }
 
   factory BusinessInfo.fromMap(Map<String, dynamic> map) {
     return BusinessInfo(
@@ -56,6 +94,14 @@ class BusinessInfo {
       refundPolicy: map['refundPolicy'] ?? '',
       shippingPolicy: map['shippingPolicy'] ?? '',
       faviconUrl: map['faviconUrl'] ?? '',
+      bannerUrls: List<String>.from(map['bannerUrls'] ?? []),
+      banners: (map['banners'] as List?)
+              ?.map((b) => HomeBanner.fromMap(Map<String, dynamic>.from(b)))
+              .toList() ??
+          [],
+      couponCode: map['couponCode'] ?? '',
+      couponDiscountPercentage: (map['couponDiscountPercentage'] as num?)?.toDouble() ?? 0.0,
+      couponProductIds: List<String>.from(map['couponProductIds'] ?? []),
     );
   }
 
@@ -78,6 +124,11 @@ class BusinessInfo {
       'refundPolicy': refundPolicy,
       'shippingPolicy': shippingPolicy,
       'faviconUrl': faviconUrl,
+      'bannerUrls': bannerUrls,
+      'banners': banners.map((b) => b.toMap()).toList(),
+      'couponCode': couponCode,
+      'couponDiscountPercentage': couponDiscountPercentage,
+      'couponProductIds': couponProductIds,
     };
   }
 
@@ -99,6 +150,11 @@ class BusinessInfo {
     String? refundPolicy,
     String? shippingPolicy,
     String? faviconUrl,
+    List<String>? bannerUrls,
+    List<HomeBanner>? banners,
+    String? couponCode,
+    double? couponDiscountPercentage,
+    List<String>? couponProductIds,
   }) {
     return BusinessInfo(
       companyName: companyName ?? this.companyName,
@@ -118,6 +174,11 @@ class BusinessInfo {
       refundPolicy: refundPolicy ?? this.refundPolicy,
       shippingPolicy: shippingPolicy ?? this.shippingPolicy,
       faviconUrl: faviconUrl ?? this.faviconUrl,
+      bannerUrls: bannerUrls ?? this.bannerUrls,
+      banners: banners ?? this.banners,
+      couponCode: couponCode ?? this.couponCode,
+      couponDiscountPercentage: couponDiscountPercentage ?? this.couponDiscountPercentage,
+      couponProductIds: couponProductIds ?? this.couponProductIds,
     );
   }
 }

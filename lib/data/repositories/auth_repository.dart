@@ -50,6 +50,7 @@ class AuthRepository {
       email: email,
       role: role,
       wishlist: [],
+      referralCode: UserModel.generateReferralCode(name, user.uid),
     );
 
     await _firestore.collection('users').doc(user.uid).set(userModel.toMap());
@@ -70,12 +71,14 @@ class AuthRepository {
       return details;
     }
     // If auth succeeds but document missing (e.g. legacy/social login mismatch), create default doc
+    final name = email.split('@')[0];
     final userModel = UserModel(
       id: user.uid,
-      name: email.split('@')[0],
+      name: name,
       email: email,
       role: email.trim().toLowerCase() == 'admin@alruby.com' ? 'admin' : 'customer',
       wishlist: [],
+      referralCode: UserModel.generateReferralCode(name, user.uid),
     );
     await _firestore.collection('users').doc(user.uid).set(userModel.toMap());
     return userModel;
@@ -92,6 +95,58 @@ class AuthRepository {
   Future<void> updateWishlist(String uid, List<String> wishlist) async {
     await _firestore.collection('users').doc(uid).update({
       'wishlist': wishlist,
+    });
+  }
+
+  Future<void> updateMarketingProfile(String uid, String phoneNumber, String upiId) async {
+    await _firestore.collection('users').doc(uid).update({
+      'phoneNumber': phoneNumber,
+      'upiId': upiId,
+    });
+  }
+
+  Future<void> requestWithdrawal(String uid, double amount) async {
+    await _firestore.collection('users').doc(uid).update({
+      'withdrawalRequested': true,
+      'withdrawalRequestedAmount': amount,
+    });
+  }
+
+  Future<void> updatePaidAmount(String uid, double newPaidAmount) async {
+    // Retrieve user doc to compute balance and check withdrawal
+    final doc = await _firestore.collection('users').doc(uid).get();
+    if (doc.exists && doc.data() != null) {
+      final u = UserModel.fromMap(doc.id, doc.data()!);
+      final updatedPaid = u.totalPaid + newPaidAmount;
+      await _firestore.collection('users').doc(uid).update({
+        'totalPaid': updatedPaid,
+        'withdrawalRequested': false,
+        'withdrawalRequestedAmount': 0.0,
+      });
+    }
+  }
+
+  Stream<List<UserModel>> watchAllUsers() {
+    return _firestore.collection('users').snapshots().map((snapshot) {
+      return snapshot.docs.map((doc) => UserModel.fromMap(doc.id, doc.data())).toList();
+    });
+  }
+
+  Future<void> saveShippingAddress(String uid, {
+    required String phoneNumber,
+    required String houseStreet,
+    required String city,
+    required String district,
+    required String state,
+    required String pinCode,
+  }) async {
+    await _firestore.collection('users').doc(uid).update({
+      'phoneNumber': phoneNumber,
+      'savedHouseStreet': houseStreet,
+      'savedCity': city,
+      'savedDistrict': district,
+      'savedState': state,
+      'savedPinCode': pinCode,
     });
   }
 }

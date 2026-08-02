@@ -2,19 +2,76 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:al_ruby_ecommerce/presentation/providers/providers.dart';
+import 'package:al_ruby_ecommerce/data/models/business_info.dart';
 
-class CartScreen extends ConsumerWidget {
+class CartScreen extends ConsumerStatefulWidget {
   const CartScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CartScreen> createState() => _CartScreenState();
+}
+
+class _CartScreenState extends ConsumerState<CartScreen> {
+  final _couponController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final applied = ref.read(appliedCouponProvider);
+      if (applied != null) {
+        _couponController.text = applied;
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _couponController.dispose();
+    super.dispose();
+  }
+
+  void _applyCoupon(String code, BusinessInfo? businessInfo) {
+    if (businessInfo == null) return;
+    if (code.trim().isEmpty) {
+      ref.read(appliedCouponProvider.notifier).state = null;
+      return;
+    }
+
+    if (code.trim().toUpperCase() == businessInfo.couponCode.toUpperCase()) {
+      ref.read(appliedCouponProvider.notifier).state = code.trim().toUpperCase();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Coupon "${businessInfo.couponCode}" applied successfully!')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Invalid coupon code')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final cartItems = ref.watch(cartProvider);
     final cartNotifier = ref.read(cartProvider.notifier);
-    final subtotal = cartNotifier.subtotal;
-    const shippingCharge = 0.0; // Flat shipping rate as in Screen 4 (Free)
-    const discount = 280.0; // Coupon discount example from Screen 4
-    final grandTotal = subtotal - discount;
+    final businessInfo = ref.watch(businessInfoProvider).value;
+    final appliedCoupon = ref.watch(appliedCouponProvider);
 
+    final subtotal = cartNotifier.subtotal;
+    final shippingCharge = cartNotifier.shippingFee;
+
+    double couponDiscount = 0.0;
+    if (businessInfo != null &&
+        appliedCoupon != null &&
+        appliedCoupon.toUpperCase() == businessInfo.couponCode.toUpperCase()) {
+      for (final item in cartItems) {
+        if (businessInfo.couponProductIds.contains(item.product.id)) {
+          couponDiscount += item.totalPrice * (businessInfo.couponDiscountPercentage / 100);
+        }
+      }
+    }
+
+    final grandTotal = (subtotal + shippingCharge - couponDiscount).clamp(0.0, double.infinity);
     final isDesktop = MediaQuery.of(context).size.width > 800;
 
     return Scaffold(
@@ -40,14 +97,32 @@ class CartScreen extends ConsumerWidget {
                           children: [
                             Expanded(flex: 2, child: _buildCartItemsList(context, cartItems, cartNotifier)),
                             const SizedBox(width: 32),
-                            Expanded(child: _buildOrderSummaryCard(context, subtotal, discount, shippingCharge, grandTotal)),
+                            Expanded(
+                              child: _buildOrderSummaryCard(
+                                context,
+                                subtotal,
+                                couponDiscount,
+                                shippingCharge,
+                                grandTotal,
+                                appliedCoupon,
+                                businessInfo,
+                              ),
+                            ),
                           ],
                         )
                       : Column(
                           children: [
                             _buildCartItemsList(context, cartItems, cartNotifier),
                             const SizedBox(height: 24),
-                            _buildOrderSummaryCard(context, subtotal, discount, shippingCharge, grandTotal),
+                            _buildOrderSummaryCard(
+                              context,
+                              subtotal,
+                              couponDiscount,
+                              shippingCharge,
+                              grandTotal,
+                              appliedCoupon,
+                              businessInfo,
+                            ),
                           ],
                         ),
                 ),
@@ -118,47 +193,51 @@ class CartScreen extends ConsumerWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
+                      if (item.selectedVariantSize != null) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          'Size: ${item.selectedVariantSize}',
+                          style: const TextStyle(color: Color(0xFFC6A473), fontSize: 12, fontWeight: FontWeight.bold),
+                        ),
+                      ],
                       const SizedBox(height: 4),
                       Text(
-                        '₹${product.sellingPrice.toStringAsFixed(0)} each',
+                        '₹${item.unitPrice.toStringAsFixed(0)} each',
                         style: const TextStyle(color: Colors.grey, fontSize: 12),
                       ),
+                      if (product.shippingFee > 0) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          'Shipping: ₹${product.shippingFee.toStringAsFixed(0)}',
+                          style: const TextStyle(color: Colors.grey, fontSize: 11),
+                        ),
+                      ],
                       const SizedBox(height: 12),
                       Row(
                         children: [
                           _buildQuantityButton(context, Icons.remove, () {
-                            notifier.updateQuantity(product, item.quantity - 1);
+                            notifier.updateQuantity(product, item.quantity - 1, selectedVariantSize: item.selectedVariantSize);
                           }),
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 10.0),
                             child: Text(
                               '${item.quantity}',
-                              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
+                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
                             ),
                           ),
                           _buildQuantityButton(context, Icons.add, () {
-                            notifier.updateQuantity(product, item.quantity + 1);
+                            notifier.updateQuantity(product, item.quantity + 1, selectedVariantSize: item.selectedVariantSize);
                           }),
+                          const Spacer(),
+                          Text(
+                            '₹${item.totalPrice.toStringAsFixed(0)}',
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.white),
+                          ),
                         ],
-                      )
+                      ),
                     ],
                   ),
                 ),
-                const SizedBox(width: 16),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      '₹${item.totalPrice.toStringAsFixed(0)}',
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
-                    ),
-                    const SizedBox(height: 8),
-                    IconButton(
-                      icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
-                      onPressed: () => notifier.removeItem(product),
-                    )
-                  ],
-                )
               ],
             ),
           );
@@ -182,7 +261,15 @@ class CartScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildOrderSummaryCard(BuildContext context, double subtotal, double discount, double shipping, double total) {
+  Widget _buildOrderSummaryCard(
+    BuildContext context,
+    double subtotal,
+    double discount,
+    double shipping,
+    double total,
+    String? appliedCoupon,
+    BusinessInfo? businessInfo,
+  ) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(20.0),
@@ -194,11 +281,14 @@ class CartScreen extends ConsumerWidget {
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
             ),
             const SizedBox(height: 20),
+            
             // Coupon Code Field
             Row(
               children: [
                 Expanded(
                   child: TextFormField(
+                    controller: _couponController,
+                    enabled: appliedCoupon == null,
                     decoration: const InputDecoration(
                       hintText: 'Coupon Code',
                       contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -207,11 +297,31 @@ class CartScreen extends ConsumerWidget {
                 ),
                 const SizedBox(width: 8),
                 TextButton(
-                  onPressed: () {},
-                  child: const Text('Apply', style: TextStyle(color: Color(0xFFC6A473), fontWeight: FontWeight.bold)),
+                  onPressed: () {
+                    if (appliedCoupon != null) {
+                      ref.read(appliedCouponProvider.notifier).state = null;
+                      _couponController.clear();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Coupon removed')),
+                      );
+                    } else {
+                      _applyCoupon(_couponController.text, businessInfo);
+                    }
+                  },
+                  child: Text(
+                    appliedCoupon != null ? 'Remove' : 'Apply',
+                    style: const TextStyle(color: Color(0xFFC6A473), fontWeight: FontWeight.bold),
+                  ),
                 ),
               ],
             ),
+            if (appliedCoupon != null && businessInfo != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Coupon applied: ${businessInfo.couponDiscountPercentage.toStringAsFixed(0)}% OFF on covered products',
+                style: const TextStyle(color: Colors.green, fontSize: 11, fontWeight: FontWeight.bold),
+              ),
+            ],
             const SizedBox(height: 20),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -220,20 +330,28 @@ class CartScreen extends ConsumerWidget {
                 Text('₹${subtotal.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
               ],
             ),
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('Discount', style: TextStyle(color: Colors.grey)),
-                Text('- ₹${discount.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
-              ],
-            ),
+            if (discount > 0) ...[
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Discount', style: TextStyle(color: Colors.grey)),
+                  Text('- ₹${discount.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
+                ],
+              ),
+            ],
             const SizedBox(height: 12),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text('Shipping', style: TextStyle(color: Colors.grey)),
-                const Text('Free', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
+                Text(
+                  shipping == 0 ? 'Free' : '₹${shipping.toStringAsFixed(0)}',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: shipping == 0 ? Colors.green : Colors.white,
+                  ),
+                ),
               ],
             ),
             const Divider(color: Color(0xFF05372B), height: 28),

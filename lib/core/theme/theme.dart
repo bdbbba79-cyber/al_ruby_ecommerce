@@ -65,11 +65,11 @@ class AppTheme {
         fillColor: surfaceColor,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide.none,
+          borderSide: const BorderSide(color: Color(0xFF0D5F4D), width: 1.5),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide.none,
+          borderSide: const BorderSide(color: Color(0xFF0D5F4D), width: 1.5),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
@@ -80,9 +80,10 @@ class AppTheme {
           borderSide: const BorderSide(color: Colors.red, width: 1.5),
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        hintStyle: const TextStyle(color: Color(0xFF9CA3AF)),
-        prefixIconColor: const Color(0xFF9CA3AF),
-        suffixIconColor: const Color(0xFF9CA3AF),
+        hintStyle: const TextStyle(color: Colors.white30),
+        labelStyle: const TextStyle(color: Colors.white70),
+        prefixIconColor: const Color(0xFFC6A473),
+        suffixIconColor: const Color(0xFFC6A473),
       ),
       cardTheme: CardThemeData(
         color: surfaceColor,

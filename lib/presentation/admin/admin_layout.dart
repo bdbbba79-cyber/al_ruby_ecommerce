@@ -33,6 +33,9 @@ class AdminLayout extends ConsumerWidget {
       case 4:
         context.go('/admin/settings');
         break;
+      case 5:
+        context.go('/admin/users');
+        break;
     }
   }
 
@@ -47,10 +50,59 @@ class AdminLayout extends ConsumerWidget {
       const NavigationDrawerValue(Icons.folder_open_outlined, 'Categories'),
       const NavigationDrawerValue(Icons.receipt_long_outlined, 'Orders'),
       const NavigationDrawerValue(Icons.settings_outlined, 'Settings'),
+      const NavigationDrawerValue(Icons.people_outline, 'Users'),
     ];
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+    final adminTheme = ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.light,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: const Color(0xFF0F62FE),
+        brightness: Brightness.light,
+        background: const Color(0xFFF8FAFC),
+        surface: Colors.white,
+      ),
+      scaffoldBackgroundColor: const Color(0xFFF8FAFC),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Colors.white,
+        foregroundColor: Color(0xFF0F172A),
+        elevation: 0,
+        iconTheme: IconThemeData(color: Color(0xFF0F172A)),
+      ),
+      cardTheme: CardThemeData(
+        color: Colors.white,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: Color(0xFFE2E8F0), width: 1),
+        ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: Colors.white,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Color(0xFFCBD5E1), width: 1.5),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1.5),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Color(0xFF0F62FE), width: 1.5),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        hintStyle: TextStyle(color: Colors.grey[400]),
+        prefixIconColor: const Color(0xFF64748B),
+        suffixIconColor: const Color(0xFF64748B),
+      ),
+    );
+
+    return Theme(
+      data: adminTheme,
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
         backgroundColor: Colors.white,
@@ -170,7 +222,7 @@ class AdminLayout extends ConsumerWidget {
           ),
         ],
       ),
-    );
+    ),);
   }
 
   Widget _buildHeader(businessInfo) {
@@ -183,9 +235,9 @@ class AdminLayout extends ConsumerWidget {
           if (businessInfo != null && businessInfo.companyLogoUrl.isNotEmpty)
             Image.network(businessInfo.companyLogoUrl, height: 40, fit: BoxFit.contain)
           else
-            const Text(
-              'AR ADMIN',
-              style: TextStyle(
+            Text(
+              businessInfo?.companyName.toUpperCase() ?? 'AR ADMIN',
+              style: const TextStyle(
                 color: Color(0xFF0F62FE),
                 fontSize: 22,
                 fontWeight: FontWeight.bold,

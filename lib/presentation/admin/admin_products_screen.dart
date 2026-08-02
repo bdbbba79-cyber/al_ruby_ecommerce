@@ -272,6 +272,13 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
   final _mrpController = TextEditingController();
   final _priceController = TextEditingController();
   final _stockController = TextEditingController();
+  final _shippingFeeController = TextEditingController();
+
+  final List<ProductVariant> _variants = [];
+  final _variantSizeController = TextEditingController();
+  final _variantMrpController = TextEditingController();
+  final _variantPriceController = TextEditingController();
+  final _variantStockController = TextEditingController();
 
   String? _selectedCategory;
   String _status = 'active';
@@ -299,10 +306,14 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
       _mrpController.text = p.mrp.toStringAsFixed(0);
       _priceController.text = p.sellingPrice.toStringAsFixed(0);
       _stockController.text = p.stock.toString();
+      _shippingFeeController.text = p.shippingFee.toStringAsFixed(0);
       _selectedCategory = p.category;
       _status = p.status;
       _images.addAll(p.images);
       _specifications.addAll(p.specifications);
+      _variants.addAll(p.variants);
+    } else {
+      _shippingFeeController.text = '0';
     }
   }
 
@@ -315,9 +326,14 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
     _mrpController.dispose();
     _priceController.dispose();
     _stockController.dispose();
+    _shippingFeeController.dispose();
     _specKeyController.dispose();
     _specValController.dispose();
     _imageUrlController.dispose();
+    _variantSizeController.dispose();
+    _variantMrpController.dispose();
+    _variantPriceController.dispose();
+    _variantStockController.dispose();
     super.dispose();
   }
 
@@ -351,6 +367,32 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
     }
   }
 
+  void _addVariant() {
+    final size = _variantSizeController.text.trim();
+    final double? mrp = double.tryParse(_variantMrpController.text.trim());
+    final double? price = double.tryParse(_variantPriceController.text.trim());
+    final int? stock = int.tryParse(_variantStockController.text.trim());
+
+    if (size.isNotEmpty && mrp != null && price != null && stock != null) {
+      setState(() {
+        _variants.add(ProductVariant(
+          size: size,
+          mrp: mrp,
+          sellingPrice: price,
+          stock: stock,
+        ));
+        _variantSizeController.clear();
+        _variantMrpController.clear();
+        _variantPriceController.clear();
+        _variantStockController.clear();
+      });
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fill all variant fields with valid numbers')),
+      );
+    }
+  }
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedCategory == null) {
@@ -373,8 +415,20 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
         uploadedUrls.add(url);
       }
 
-      final double mrp = double.parse(_mrpController.text);
-      final double price = double.parse(_priceController.text);
+      double mrp = 0.0;
+      double price = 0.0;
+      int stock = 0;
+
+      if (_variants.isNotEmpty) {
+        mrp = _variants.first.mrp;
+        price = _variants.first.sellingPrice;
+        stock = _variants.fold(0, (sum, v) => sum + v.stock);
+      } else {
+        mrp = double.parse(_mrpController.text);
+        price = double.parse(_priceController.text);
+        stock = int.parse(_stockController.text);
+      }
+
       final double discount = mrp > 0 ? ((mrp - price) / mrp) * 100 : 0.0;
 
       final p = Product(
@@ -387,10 +441,12 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
         mrp: mrp,
         sellingPrice: price,
         discount: discount.clamp(0.0, 100.0),
-        stock: int.parse(_stockController.text),
+        stock: stock,
         images: uploadedUrls,
         specifications: _specifications,
         status: _status,
+        variants: _variants,
+        shippingFee: double.tryParse(_shippingFeeController.text.trim()) ?? 0.0,
       );
 
       if (widget.product == null) {
@@ -523,7 +579,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                               controller: _mrpController,
                               keyboardType: TextInputType.number,
                               decoration: const InputDecoration(labelText: 'Market Retail Price (MRP)'),
-                              validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+                              validator: (v) => _variants.isEmpty && (v == null || v.isEmpty) ? 'Required' : null,
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -532,7 +588,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                               controller: _priceController,
                               keyboardType: TextInputType.number,
                               decoration: const InputDecoration(labelText: 'Selling Price'),
-                              validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+                              validator: (v) => _variants.isEmpty && (v == null || v.isEmpty) ? 'Required' : null,
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -541,7 +597,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                               controller: _stockController,
                               keyboardType: TextInputType.number,
                               decoration: const InputDecoration(labelText: 'Stock Units'),
-                              validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+                              validator: (v) => _variants.isEmpty && (v == null || v.isEmpty) ? 'Required' : null,
                             ),
                           ),
                         ],
@@ -552,24 +608,39 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                             controller: _mrpController,
                             keyboardType: TextInputType.number,
                             decoration: const InputDecoration(labelText: 'Market Retail Price (MRP)'),
-                            validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+                            validator: (v) => _variants.isEmpty && (v == null || v.isEmpty) ? 'Required' : null,
                           ),
                           const SizedBox(height: 12),
                           TextFormField(
                             controller: _priceController,
                             keyboardType: TextInputType.number,
                             decoration: const InputDecoration(labelText: 'Selling Price'),
-                            validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+                            validator: (v) => _variants.isEmpty && (v == null || v.isEmpty) ? 'Required' : null,
                           ),
                           const SizedBox(height: 12),
                           TextFormField(
                             controller: _stockController,
                             keyboardType: TextInputType.number,
                             decoration: const InputDecoration(labelText: 'Stock Units'),
-                            validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+                            validator: (v) => _variants.isEmpty && (v == null || v.isEmpty) ? 'Required' : null,
                           ),
                         ],
                       ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _shippingFeeController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Shipping Fee (₹)',
+                    hintText: 'Enter shipping fee (0 or empty for Free)',
+                  ),
+                  validator: (v) {
+                    if (v != null && v.isNotEmpty && double.tryParse(v) == null) {
+                      return 'Enter a valid number';
+                    }
+                    return null;
+                  },
+                ),
                 const SizedBox(height: 12),
 
                 // Status
@@ -582,6 +653,87 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                   ],
                   onChanged: (val) => setState(() => _status = val!),
                 ),
+                const SizedBox(height: 20),
+
+                // Sizes / Quantities (Variants)
+                const Text('Sizes / Quantities (Variants)', style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                isDesktop
+                    ? Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(controller: _variantSizeController, decoration: const InputDecoration(hintText: 'Size (e.g. 50 ML, 1 L)')),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: TextFormField(controller: _variantMrpController, keyboardType: TextInputType.number, decoration: const InputDecoration(hintText: 'MRP')),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: TextFormField(controller: _variantPriceController, keyboardType: TextInputType.number, decoration: const InputDecoration(hintText: 'Price')),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: TextFormField(controller: _variantStockController, keyboardType: TextInputType.number, decoration: const InputDecoration(hintText: 'Stock')),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.add_circle, color: Color(0xFF0F62FE)),
+                            onPressed: _addVariant,
+                          ),
+                        ],
+                      )
+                    : Column(
+                        children: [
+                          TextFormField(controller: _variantSizeController, decoration: const InputDecoration(labelText: 'Size (e.g. 50 ML)')),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextFormField(controller: _variantMrpController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'MRP')),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: TextFormField(controller: _variantPriceController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Selling Price')),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextFormField(controller: _variantStockController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Stock Units')),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.add_circle, color: Color(0xFF0F62FE)),
+                                onPressed: _addVariant,
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                if (_variants.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: _variants.length,
+                    itemBuilder: (context, idx) {
+                      final v = _variants[idx];
+                      return Card(
+                        color: Theme.of(context).colorScheme.surface,
+                        margin: const EdgeInsets.only(bottom: 8),
+                        child: ListTile(
+                          title: Text('${v.size} - ₹${v.sellingPrice.toStringAsFixed(0)} (MRP: ₹${v.mrp.toStringAsFixed(0)})', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white)),
+                          subtitle: Text('Stock: ${v.stock} units', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                          trailing: IconButton(
+                            icon: const Icon(Icons.delete, color: Colors.red),
+                            onPressed: () => setState(() => _variants.removeAt(idx)),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ],
                 const SizedBox(height: 12),
 
                 // Description

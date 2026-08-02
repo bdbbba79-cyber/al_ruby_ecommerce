@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:al_ruby_ecommerce/presentation/providers/providers.dart';
 import 'package:al_ruby_ecommerce/data/models/order.dart';
+import 'package:al_ruby_ecommerce/core/constants/india_places.dart';
 
 class CheckoutScreen extends ConsumerStatefulWidget {
   const CheckoutScreen({super.key});
@@ -22,14 +24,18 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   
   final _houseStreetController = TextEditingController();
   final _cityController = TextEditingController();
-  final _districtController = TextEditingController();
-  final _stateController = TextEditingController();
   final _pinCodeController = TextEditingController();
 
   final _utrController = TextEditingController();
 
+  String? _selectedState;
+  String? _selectedDistrict;
+  bool _saveAddress = false;
+
   String _paymentMethod = 'COD'; // 'COD' or 'UPI'
   bool _isLoading = false;
+
+  List<String> get _districtsList => _selectedState != null ? (indiaStatesAndDistricts[_selectedState] ?? []) : [];
 
   @override
   void initState() {
@@ -40,6 +46,22 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       if (user != null) {
         _nameController.text = user.name;
         _emailController.text = user.email;
+        _mobileController.text = user.phoneNumber;
+        _houseStreetController.text = user.savedHouseStreet;
+        _cityController.text = user.savedCity;
+        _pinCodeController.text = user.savedPinCode;
+        
+        setState(() {
+          if (user.savedState.isNotEmpty && indiaStatesAndDistricts.containsKey(user.savedState)) {
+            _selectedState = user.savedState;
+            if (user.savedDistrict.isNotEmpty && (indiaStatesAndDistricts[user.savedState]?.contains(user.savedDistrict) ?? false)) {
+              _selectedDistrict = user.savedDistrict;
+            }
+          }
+          if (user.savedHouseStreet.isNotEmpty) {
+            _saveAddress = true;
+          }
+        });
       }
     });
   }
@@ -51,8 +73,6 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     _emailController.dispose();
     _houseStreetController.dispose();
     _cityController.dispose();
-    _districtController.dispose();
-    _stateController.dispose();
     _pinCodeController.dispose();
     _utrController.dispose();
     super.dispose();
@@ -72,8 +92,23 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
     final cartItems = ref.read(cartProvider);
     final subtotal = ref.read(cartProvider.notifier).subtotal;
-    const shippingCharge = 50.0;
-    final grandTotal = subtotal + shippingCharge;
+    final shippingCharge = ref.read(cartProvider.notifier).shippingFee;
+    final businessInfo = ref.read(businessInfoProvider).value;
+    final appliedCoupon = ref.read(appliedCouponProvider);
+
+    double couponDiscount = 0.0;
+    if (businessInfo != null &&
+        appliedCoupon != null &&
+        appliedCoupon.toUpperCase() == businessInfo.couponCode.toUpperCase()) {
+      for (final item in cartItems) {
+        if (businessInfo.couponProductIds.contains(item.product.id)) {
+          couponDiscount += item.totalPrice * (businessInfo.couponDiscountPercentage / 100);
+        }
+      }
+    }
+    final grandTotal = (subtotal + shippingCharge - couponDiscount).clamp(0.0, double.infinity);
+
+
 
     if (_paymentMethod == 'UPI' && _utrController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -96,16 +131,20 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         shippingAddress: ShippingAddress(
           houseStreet: _houseStreetController.text.trim(),
           city: _cityController.text.trim(),
-          district: _districtController.text.trim(),
-          state: _stateController.text.trim(),
+          district: _selectedDistrict ?? '',
+          state: _selectedState ?? '',
           pinCode: _pinCodeController.text.trim(),
         ),
         items: cartItems.map((item) => OrderItem(
           productId: item.product.id,
-          productName: item.product.name,
-          price: item.product.sellingPrice,
+          productName: item.selectedVariantSize != null
+              ? '${item.product.name} (${item.selectedVariantSize})'
+              : item.product.name,
+          price: item.unitPrice,
           quantity: item.quantity,
           imageUrl: item.product.images.isNotEmpty ? item.product.images.first : '',
+          selectedSize: item.selectedVariantSize,
+          referrerCode: item.referrerCode,
         )).toList(),
         subtotal: subtotal,
         shippingCharge: shippingCharge,
@@ -121,8 +160,73 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
       final orderId = await ref.read(orderRepoProvider).placeOrder(order);
 
+      // Process automatic commissions based on cart items' referrer codes
+      final Map<String, double> commissionByReferrerCode = {};
+      for (final item in cartItems) {
+        final refCode = item.referrerCode;
+        if (refCode != null && refCode.isNotEmpty) {
+          // A user cannot earn commission on their own purchase
+          if (refCode.toUpperCase() == user.referralCode.toUpperCase()) {
+            continue;
+          }
+          final itemCommission = item.totalPrice * 0.05;
+          commissionByReferrerCode[refCode] = (commissionByReferrerCode[refCode] ?? 0.0) + itemCommission;
+        }
+      }
+
+      for (final entry in commissionByReferrerCode.entries) {
+        final refCode = entry.key.toUpperCase();
+        final commission = entry.value;
+
+        try {
+          final referrerQuery = await FirebaseFirestore.instance
+              .collection('users')
+              .where('referralCode', isEqualTo: refCode)
+              .get();
+          if (referrerQuery.docs.isNotEmpty) {
+            final referrerDoc = referrerQuery.docs.first;
+            final referrerUid = referrerDoc.id;
+            final currentEarned = (referrerDoc.data()['totalEarned'] as num?)?.toDouble() ?? 0.0;
+            await FirebaseFirestore.instance.collection('users').doc(referrerUid).update({
+              'totalEarned': currentEarned + commission,
+            });
+          }
+        } catch (e) {
+          debugPrint("Failed to update referral commission for code $refCode: $e");
+        }
+      }
+
+      if (_saveAddress) {
+        final phone = _mobileController.text.trim();
+        final houseStreet = _houseStreetController.text.trim();
+        final city = _cityController.text.trim();
+        final district = _selectedDistrict ?? '';
+        final state = _selectedState ?? '';
+        final pinCode = _pinCodeController.text.trim();
+
+        await ref.read(authRepoProvider).saveShippingAddress(
+          user.id,
+          phoneNumber: phone,
+          houseStreet: houseStreet,
+          city: city,
+          district: district,
+          state: state,
+          pinCode: pinCode,
+        );
+
+        ref.read(currentUserDetailsProvider.notifier).state = user.copyWith(
+          phoneNumber: phone,
+          savedHouseStreet: houseStreet,
+          savedCity: city,
+          savedDistrict: district,
+          savedState: state,
+          savedPinCode: pinCode,
+        );
+      }
+
       // Clear Cart
       ref.read(cartProvider.notifier).clear();
+      ref.read(appliedCouponProvider.notifier).state = null;
 
       if (!mounted) return;
       showDialog(
@@ -159,10 +263,23 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserDetailsProvider);
     final cartItems = ref.watch(cartProvider);
-    final subtotal = ref.read(cartProvider.notifier).subtotal;
-    const shippingCharge = 50.0;
-    final grandTotal = subtotal + shippingCharge;
+    final cartNotifier = ref.read(cartProvider.notifier);
+    final subtotal = cartNotifier.subtotal;
+    final shippingCharge = cartNotifier.shippingFee;
     final businessInfo = ref.watch(businessInfoProvider).value;
+    final appliedCoupon = ref.watch(appliedCouponProvider);
+
+    double couponDiscount = 0.0;
+    if (businessInfo != null &&
+        appliedCoupon != null &&
+        appliedCoupon.toUpperCase() == businessInfo.couponCode.toUpperCase()) {
+      for (final item in cartItems) {
+        if (businessInfo.couponProductIds.contains(item.product.id)) {
+          couponDiscount += item.totalPrice * (businessInfo.couponDiscountPercentage / 100);
+        }
+      }
+    }
+    final grandTotal = (subtotal + shippingCharge - couponDiscount).clamp(0.0, double.infinity);
 
     if (user == null) {
       return Scaffold(
@@ -232,14 +349,14 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   ? Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(flex: 2, child: _buildFormSections(upiUrl, grandTotal)),
+                        Expanded(flex: 2, child: _buildFormSections(upiUrl, grandTotal, isDesktop)),
                         const SizedBox(width: 32),
                         Expanded(child: _buildSummaryAndPlaceOrder(grandTotal)),
                       ],
                     )
                   : Column(
                       children: [
-                        _buildFormSections(upiUrl, grandTotal),
+                        _buildFormSections(upiUrl, grandTotal, isDesktop),
                         const SizedBox(height: 24),
                         _buildSummaryAndPlaceOrder(grandTotal),
                       ],
@@ -251,7 +368,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     );
   }
 
-  Widget _buildFormSections(String upiUrl, double totalAmount) {
+  Widget _buildFormSections(String upiUrl, double totalAmount, bool isDesktop) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -316,26 +433,6 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: TextFormField(
-                        controller: _districtController,
-                        decoration: const InputDecoration(hintText: 'District'),
-                        validator: (value) => value == null || value.isEmpty ? 'District is required' : null,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextFormField(
-                        controller: _stateController,
-                        decoration: const InputDecoration(hintText: 'State'),
-                        validator: (value) => value == null || value.isEmpty ? 'State is required' : null,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextFormField(
                         controller: _pinCodeController,
                         keyboardType: TextInputType.number,
                         decoration: const InputDecoration(hintText: 'PIN Code'),
@@ -343,6 +440,120 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 12),
+                isDesktop
+                    ? Row(
+                        children: [
+                          Expanded(
+                            child: DropdownButtonFormField<String>(
+                              isExpanded: true,
+                              value: _selectedState,
+                              decoration: const InputDecoration(hintText: 'Select State'),
+                              items: indiaStatesAndDistricts.keys.map((state) {
+                                return DropdownMenuItem<String>(
+                                  value: state,
+                                  child: Text(
+                                    state,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                                  ),
+                                );
+                              }).toList(),
+                              onChanged: (val) {
+                                setState(() {
+                                  _selectedState = val;
+                                  _selectedDistrict = null;
+                                });
+                              },
+                              validator: (value) => value == null ? 'State is required' : null,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: DropdownButtonFormField<String>(
+                              isExpanded: true,
+                              value: _selectedDistrict,
+                              decoration: const InputDecoration(hintText: 'Select District'),
+                              items: _districtsList.map((dist) {
+                                return DropdownMenuItem<String>(
+                                  value: dist,
+                                  child: Text(
+                                    dist,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                                  ),
+                                );
+                              }).toList(),
+                              onChanged: (val) {
+                                setState(() {
+                                  _selectedDistrict = val;
+                                });
+                              },
+                              validator: (value) => value == null ? 'District is required' : null,
+                            ),
+                          ),
+                        ],
+                      )
+                    : Column(
+                        children: [
+                          DropdownButtonFormField<String>(
+                            isExpanded: true,
+                            value: _selectedState,
+                            decoration: const InputDecoration(hintText: 'Select State'),
+                            items: indiaStatesAndDistricts.keys.map((state) {
+                              return DropdownMenuItem<String>(
+                                value: state,
+                                child: Text(
+                                  state,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                                ),
+                              );
+                            }).toList(),
+                            onChanged: (val) {
+                              setState(() {
+                                _selectedState = val;
+                                _selectedDistrict = null;
+                              });
+                            },
+                            validator: (value) => value == null ? 'State is required' : null,
+                          ),
+                          const SizedBox(height: 12),
+                          DropdownButtonFormField<String>(
+                            isExpanded: true,
+                            value: _selectedDistrict,
+                            decoration: const InputDecoration(hintText: 'Select District'),
+                            items: _districtsList.map((dist) {
+                              return DropdownMenuItem<String>(
+                                value: dist,
+                                child: Text(
+                                  dist,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                                ),
+                              );
+                            }).toList(),
+                            onChanged: (val) {
+                              setState(() {
+                                _selectedDistrict = val;
+                              });
+                            },
+                            validator: (value) => value == null ? 'District is required' : null,
+                          ),
+                        ],
+                      ),
+                const SizedBox(height: 16),
+                CheckboxListTile(
+                  title: const Text('Save Address & Mobile for future orders', style: TextStyle(fontSize: 12, color: Colors.white70)),
+                  value: _saveAddress,
+                  controlAffinity: ListTileControlAffinity.leading,
+                  contentPadding: EdgeInsets.zero,
+                  onChanged: (val) {
+                    setState(() {
+                      _saveAddress = val ?? false;
+                    });
+                  },
                 ),
               ],
             ),

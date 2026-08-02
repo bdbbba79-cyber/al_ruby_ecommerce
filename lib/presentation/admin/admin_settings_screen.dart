@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,6 +6,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:al_ruby_ecommerce/presentation/admin/admin_layout.dart';
 import 'package:al_ruby_ecommerce/presentation/providers/providers.dart';
 import 'package:al_ruby_ecommerce/data/models/business_info.dart';
+import 'package:al_ruby_ecommerce/data/models/product.dart';
 
 class AdminSettingsScreen extends ConsumerStatefulWidget {
   const AdminSettingsScreen({super.key});
@@ -35,24 +37,21 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
 
   final _logoUrlController = TextEditingController();
   final _faviconUrlController = TextEditingController();
-  final _bannerUrlController = TextEditingController();
+  final _bannerImageUrlController = TextEditingController();
+  final _couponCodeController = TextEditingController();
+  final _couponDiscountPercentageController = TextEditingController();
 
   String _logoUrl = '';
   String _faviconUrl = '';
   bool _isSavingInfo = false;
 
-  // Banner states
-  List<Map<String, dynamic>> _rawBanners = [];
-  bool _isLoadingBanners = false;
-  Uint8List? _newBannerBytes;
-  String? _newBannerName;
-  final _bannerOrderController = TextEditingController(text: '1');
-  bool _isUploadingBanner = false;
+  final List<HomeBanner> _banners = [];
+  String? _selectedBannerProductId;
+  final List<String> _couponProductIds = [];
 
   @override
   void initState() {
     super.initState();
-    _loadBanners();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final info = ref.read(businessInfoProvider).value;
       if (info != null) {
@@ -79,6 +78,12 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
     _faviconUrl = info.faviconUrl;
     _logoUrlController.text = info.companyLogoUrl;
     _faviconUrlController.text = info.faviconUrl;
+    _banners.clear();
+    _banners.addAll(info.banners);
+    _couponCodeController.text = info.couponCode;
+    _couponDiscountPercentageController.text = info.couponDiscountPercentage.toStringAsFixed(0);
+    _couponProductIds.clear();
+    _couponProductIds.addAll(info.couponProductIds);
   }
 
   @override
@@ -96,23 +101,12 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
     _privacyController.dispose();
     _refundController.dispose();
     _shippingController.dispose();
-    _bannerOrderController.dispose();
     _logoUrlController.dispose();
     _faviconUrlController.dispose();
-    _bannerUrlController.dispose();
+    _bannerImageUrlController.dispose();
+    _couponCodeController.dispose();
+    _couponDiscountPercentageController.dispose();
     super.dispose();
-  }
-
-  Future<void> _loadBanners() async {
-    setState(() => _isLoadingBanners = true);
-    try {
-      final banners = await ref.read(storeRepoProvider).getBannersRaw();
-      setState(() => _rawBanners = banners);
-    } catch (e) {
-      // Handle banner fetch error
-    } finally {
-      setState(() => _isLoadingBanners = false);
-    }
   }
 
   Future<void> _pickAndUploadLogo() async {
@@ -170,6 +164,11 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
         refundPolicy: _refundController.text.trim(),
         shippingPolicy: _shippingController.text.trim(),
         faviconUrl: _faviconUrlController.text.trim(),
+        bannerUrls: _banners.map((b) => b.imageUrl).toList(),
+        banners: _banners,
+        couponCode: _couponCodeController.text.trim(),
+        couponDiscountPercentage: double.tryParse(_couponDiscountPercentageController.text.trim()) ?? 0.0,
+        couponProductIds: _couponProductIds,
       );
 
       await ref.read(businessRepoProvider).updateBusinessInfo(info);
@@ -182,96 +181,7 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
     }
   }
 
-  Future<void> _pickBanner() async {
-    final result = await FilePicker.platform.pickFiles(type: FileType.image);
-    if (result != null && result.files.single.bytes != null) {
-      setState(() {
-        _newBannerBytes = result.files.single.bytes;
-        _newBannerName = result.files.single.name;
-      });
-    }
-  }
 
-  Future<void> _uploadBanner() async {
-    final val = _bannerUrlController.text.trim();
-    final orderIndex = int.tryParse(_bannerOrderController.text) ?? 1;
-
-    if (val.isNotEmpty) {
-      setState(() => _isUploadingBanner = true);
-      try {
-        await ref.read(storeRepoProvider).addBanner(val, orderIndex);
-        setState(() {
-          _bannerUrlController.clear();
-          _bannerOrderController.text = '${orderIndex + 1}';
-        });
-        await _loadBanners();
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Banner added successfully.')));
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to add banner: $e')));
-        }
-      } finally {
-        if (mounted) {
-          setState(() => _isUploadingBanner = false);
-        }
-      }
-      return;
-    }
-
-    if (_newBannerBytes == null) return;
-    setState(() => _isUploadingBanner = true);
-
-    try {
-      final path = 'banners/${DateTime.now().millisecondsSinceEpoch}_$_newBannerName';
-      final url = await ref.read(storeRepoProvider).uploadImage(_newBannerBytes!, path);
-      
-      await ref.read(storeRepoProvider).addBanner(url, orderIndex);
-      
-      setState(() {
-        _newBannerBytes = null;
-        _newBannerName = null;
-        _bannerOrderController.text = '${orderIndex + 1}';
-      });
-      
-      await _loadBanners();
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Banner uploaded successfully.')));
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to add banner: $e')));
-    } finally {
-      if (mounted) {
-        setState(() => _isUploadingBanner = false);
-      }
-    }
-  }
-
-  Future<void> _deleteBanner(String id, String imageUrl) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Banner'),
-        content: const Text('Are you sure you want to remove this banner image?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Remove'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm == true) {
-      await ref.read(storeRepoProvider).deleteBanner(id, imageUrl);
-      await _loadBanners();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Banner removed.')));
-      }
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -281,6 +191,7 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
       }
     });
 
+    final products = ref.watch(adminProductsProvider).value ?? [];
     final isDesktop = MediaQuery.of(context).size.width > 900;
 
     return AdminLayout(
@@ -290,28 +201,41 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
         padding: const EdgeInsets.all(24.0),
         child: Form(
           key: _formKey,
-          child: isDesktop
-              ? Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(flex: 2, child: _buildFormFields()),
-                    const SizedBox(width: 24),
-                    Expanded(child: _buildAssetsAndBanners()),
-                  ],
-                )
-              : Column(
-                  children: [
-                    _buildFormFields(),
-                    const SizedBox(height: 24),
-                    _buildAssetsAndBanners(),
-                  ],
-                ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              isDesktop
+                  ? Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(flex: 2, child: _buildFormFields(products)),
+                        const SizedBox(width: 24),
+                        Expanded(child: _buildAssetsAndBanners(products)),
+                      ],
+                    )
+                  : Column(
+                      children: [
+                        _buildFormFields(products),
+                        const SizedBox(height: 24),
+                        _buildAssetsAndBanners(products),
+                      ],
+                    ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: _isSavingInfo ? null : _saveBusinessInfo,
+                style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 20)),
+                child: _isSavingInfo
+                    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    : const Text('SAVE ALL SETTINGS'),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildFormFields() {
+  Widget _buildFormFields(List<Product> products) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -422,14 +346,117 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
             ),
           ),
         ),
-        const SizedBox(height: 24),
-        ElevatedButton(
-          onPressed: _isSavingInfo ? null : _saveBusinessInfo,
-          style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 20)),
-          child: _isSavingInfo
-              ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-              : const Text('SAVE SETTINGS PROFILE'),
-        )
+
+        const SizedBox(height: 20),
+
+        // Product Coupon Configuration Card
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Product Coupons', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                const Text(
+                  'Set up a coupon code, specify the discount percentage, and select which products are covered under this coupon.',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: _couponCodeController,
+                        decoration: const InputDecoration(labelText: 'Coupon Code (e.g. SAVE10)'),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: TextFormField(
+                        controller: _couponDiscountPercentageController,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(labelText: 'Discount Percentage (%)'),
+                        validator: (v) {
+                          if (v != null && v.isNotEmpty && (double.tryParse(v) == null || double.parse(v) < 0 || double.parse(v) > 100)) {
+                            return 'Enter 0 to 100';
+                          }
+                          return null;
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                const Text(
+                  'Select products covered under this coupon:',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                ),
+                const SizedBox(height: 10),
+                
+                Row(
+                  children: [
+                    TextButton(
+                      onPressed: () {
+                        setState(() {
+                          _couponProductIds.clear();
+                          _couponProductIds.addAll(products.map((p) => p.id));
+                        });
+                      },
+                      child: const Text('Select All'),
+                    ),
+                    const SizedBox(width: 12),
+                    TextButton(
+                      onPressed: () {
+                        setState(() {
+                          _couponProductIds.clear();
+                        });
+                      },
+                      child: const Text('Deselect All'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                
+                Container(
+                  height: 220,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: products.isEmpty
+                      ? const Center(child: Text('No products available.'))
+                      : ListView.separated(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          itemCount: products.length,
+                          separatorBuilder: (context, index) => const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                          itemBuilder: (context, idx) {
+                            final p = products[idx];
+                            final isCovered = _couponProductIds.contains(p.id);
+                            return CheckboxListTile(
+                              value: isCovered,
+                              controlAffinity: ListTileControlAffinity.leading,
+                              title: Text(p.name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+                              subtitle: Text('${p.brand} • Price: ₹${p.sellingPrice.toStringAsFixed(0)}', style: const TextStyle(fontSize: 11)),
+                              onChanged: (val) {
+                                setState(() {
+                                  if (val == true) {
+                                    if (!_couponProductIds.contains(p.id)) {
+                                      _couponProductIds.add(p.id);
+                                    }
+                                  } else {
+                                    _couponProductIds.remove(p.id);
+                                  }
+                                });
+                              },
+                            );
+                          },
+                        ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -480,7 +507,7 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
     );
   }
 
-  Widget _buildAssetsAndBanners() {
+  Widget _buildAssetsAndBanners(List<Product> products) {
     final isDesktop = MediaQuery.of(context).size.width > 900;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -526,118 +553,141 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text('Hero Carousel Banners', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 16),
-                
-                // Pick & upload banner Form
-                Row(
-                  children: [
-                    ElevatedButton.icon(
-                      onPressed: _pickBanner,
-                      icon: const Icon(Icons.image),
-                      label: Text(_newBannerName == null ? 'Pick Banner File' : 'Change File'),
-                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF64748B)),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextFormField(
-                        controller: _bannerUrlController,
-                        decoration: const InputDecoration(labelText: 'Or Paste Banner URL'),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    SizedBox(
-                      width: 60,
-                      child: TextFormField(
-                        controller: _bannerOrderController,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(labelText: 'Order'),
-                      ),
-                    ),
-                  ],
+                const SizedBox(height: 8),
+                const Text(
+                  'Add banner images and select a product to redirect the user to when they tap on the banner.',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
                 ),
-                const SizedBox(height: 12),
-                ValueListenableBuilder<TextEditingValue>(
-                  valueListenable: _bannerUrlController,
-                  builder: (context, value, child) {
-                    final hasUrl = value.text.trim().isNotEmpty;
-                    if (_newBannerBytes != null || hasUrl) {
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                const SizedBox(height: 16),
+
+                // Fields to add a new banner
+                isDesktop
+                    ? Row(
                         children: [
-                          if (hasUrl) ...[
-                            Container(
-                              height: 100,
-                              width: double.infinity,
-                              decoration: BoxDecoration(border: Border.all(color: Colors.blue), borderRadius: BorderRadius.circular(8)),
-                              clipBehavior: Clip.antiAlias,
-                              child: Image.network(value.text.trim(), fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Center(child: Text('Invalid Image URL'))),
+                          Expanded(
+                            flex: 2,
+                            child: TextFormField(
+                              controller: _bannerImageUrlController,
+                              decoration: const InputDecoration(
+                                labelText: 'Banner Image URL',
+                                hintText: 'e.g. https://alruby.in/asset/image/banner1.jpg',
+                              ),
                             ),
-                            const SizedBox(height: 12),
-                          ],
-                          if (_newBannerBytes != null && !hasUrl) ...[
-                            Container(
-                              height: 100,
-                              width: double.infinity,
-                              decoration: BoxDecoration(border: Border.all(color: Colors.blue), borderRadius: BorderRadius.circular(8)),
-                              clipBehavior: Clip.antiAlias,
-                              child: Image.memory(_newBannerBytes!, fit: BoxFit.cover),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: DropdownButtonFormField<String>(
+                              value: _selectedBannerProductId,
+                              decoration: const InputDecoration(labelText: 'Redirect Product (Optional)'),
+                              items: [
+                                const DropdownMenuItem<String>(value: null, child: Text('No Redirect')),
+                                ...products.map((p) => DropdownMenuItem<String>(value: p.id, child: Text(p.name))),
+                              ],
+                              onChanged: (val) => setState(() => _selectedBannerProductId = val),
                             ),
-                            const SizedBox(height: 12),
-                          ],
-                          ElevatedButton(
-                            onPressed: _isUploadingBanner ? null : _uploadBanner,
-                            child: _isUploadingBanner
-                                ? const SizedBox(height: 15, width: 15, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                                : const Text('Add Banner'),
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            icon: const Icon(Icons.add_circle, color: Color(0xFF0F62FE), size: 32),
+                            onPressed: () {
+                              final url = _bannerImageUrlController.text.trim();
+                              if (url.isNotEmpty) {
+                                setState(() {
+                                  _banners.add(HomeBanner(imageUrl: url, productId: _selectedBannerProductId));
+                                  _bannerImageUrlController.clear();
+                                  _selectedBannerProductId = null;
+                                });
+                              }
+                            },
                           ),
                         ],
-                      );
-                    }
-                    return const SizedBox();
-                  },
-                ),
-
-                const Divider(height: 32),
-
-                // Existing Banners List
-                const Text('Active Banners', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                const SizedBox(height: 12),
-                _isLoadingBanners
-                    ? const Center(child: CircularProgressIndicator())
-                    : (_rawBanners.isEmpty
-                        ? const Text('No active banners. Default combo offer will be displayed.', style: TextStyle(fontSize: 12, color: Colors.grey))
-                        : ListView.builder(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemCount: _rawBanners.length,
-                            itemBuilder: (context, index) {
-                              final b = _rawBanners[index];
-                              return Card(
-                                margin: const EdgeInsets.only(bottom: 12.0),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Row(
-                                    children: [
-                                      Container(
-                                        height: 50,
-                                        width: 80,
-                                        decoration: BoxDecoration(borderRadius: BorderRadius.circular(4)),
-                                        clipBehavior: Clip.antiAlias,
-                                        child: Image.network(b['imageUrl'], fit: BoxFit.cover),
-                                      ),
-                                      const SizedBox(width: 16),
-                                      Text('Order: ${b['order']}'),
-                                      const Spacer(),
-                                      IconButton(
-                                        icon: const Icon(Icons.delete_outline, color: Colors.red),
-                                        onPressed: () => _deleteBanner(b['id'], b['imageUrl']),
-                                      )
-                                    ],
-                                  ),
+                      )
+                    : Column(
+                        children: [
+                          TextFormField(
+                            controller: _bannerImageUrlController,
+                            decoration: const InputDecoration(
+                              labelText: 'Banner Image URL',
+                              hintText: 'e.g. https://alruby.in/asset/image/banner1.jpg',
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: DropdownButtonFormField<String>(
+                                  value: _selectedBannerProductId,
+                                  decoration: const InputDecoration(labelText: 'Redirect Product (Optional)'),
+                                  items: [
+                                    const DropdownMenuItem<String>(value: null, child: Text('No Redirect')),
+                                    ...products.map((p) => DropdownMenuItem<String>(value: p.id, child: Text(p.name))),
+                                  ],
+                                  onChanged: (val) => setState(() => _selectedBannerProductId = val),
                                 ),
-                              );
-                            },
-                          )),
+                              ),
+                              const SizedBox(width: 8),
+                              IconButton(
+                                icon: const Icon(Icons.add_circle, color: Color(0xFF0F62FE), size: 32),
+                                onPressed: () {
+                                  final url = _bannerImageUrlController.text.trim();
+                                  if (url.isNotEmpty) {
+                                    setState(() {
+                                      _banners.add(HomeBanner(imageUrl: url, productId: _selectedBannerProductId));
+                                      _bannerImageUrlController.clear();
+                                      _selectedBannerProductId = null;
+                                    });
+                                  }
+                                },
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+
+                if (_banners.isNotEmpty) ...[
+                  const SizedBox(height: 20),
+                  const Text('Active Banners', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  const SizedBox(height: 10),
+                  ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: _banners.length,
+                    itemBuilder: (context, idx) {
+                      final b = _banners[idx];
+                      final matchingProduct = products.cast<Product?>().firstWhere(
+                        (p) => p?.id == b.productId,
+                        orElse: () => null,
+                      );
+                      return Card(
+                        color: Theme.of(context).colorScheme.surface,
+                        margin: const EdgeInsets.only(bottom: 8),
+                        child: ListTile(
+                          leading: b.imageUrl.isNotEmpty
+                              ? ClipRRect(
+                                  borderRadius: BorderRadius.circular(4),
+                                  child: Image.network(
+                                    b.imageUrl,
+                                    width: 60,
+                                    height: 40,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => const Icon(Icons.image, color: Colors.white),
+                                  ),
+                                )
+                              : const Icon(Icons.image, color: Colors.white),
+                          title: Text(b.imageUrl, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: Colors.white)),
+                          subtitle: Text(
+                            matchingProduct != null ? 'Redirects to: ${matchingProduct.name}' : 'No Redirect',
+                            style: const TextStyle(fontSize: 11, color: Color(0xFFC6A473)),
+                          ),
+                          trailing: IconButton(
+                            icon: const Icon(Icons.delete, color: Colors.red),
+                            onPressed: () => setState(() => _banners.removeAt(idx)),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ],
               ],
             ),
           ),

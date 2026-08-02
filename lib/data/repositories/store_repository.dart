@@ -89,34 +89,4 @@ class StoreRepository {
   Future<void> deleteProduct(String id) async {
     await _firestore.collection('products').doc(id).delete();
   }
-
-  // --- Banners ---
-  Stream<List<String>> watchBanners() {
-    return _firestore
-        .collection('banners')
-        .where('active', isEqualTo: true)
-        .orderBy('order')
-        .snapshots()
-        .map((snapshot) {
-      return snapshot.docs.map((doc) => doc.data()['imageUrl'] as String).toList();
-    });
-  }
-
-  Future<List<Map<String, dynamic>>> getBannersRaw() async {
-    final snapshot = await _firestore.collection('banners').orderBy('order').get();
-    return snapshot.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList();
-  }
-
-  Future<void> addBanner(String imageUrl, int order) async {
-    await _firestore.collection('banners').add({
-      'imageUrl': imageUrl,
-      'order': order,
-      'active': true,
-    });
-  }
-
-  Future<void> deleteBanner(String id, String imageUrl) async {
-    await _firestore.collection('banners').doc(id).delete();
-    await deleteImage(imageUrl);
-  }
 }

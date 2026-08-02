@@ -247,7 +247,12 @@ class _ProductsViewState extends ConsumerState<ProductsView> {
                           child: const Center(
                             child: Text(
                               'OUT OF STOCK',
-                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 8,
+                                letterSpacing: 1.0,
+                              ),
                             ),
                           ),
                         ),

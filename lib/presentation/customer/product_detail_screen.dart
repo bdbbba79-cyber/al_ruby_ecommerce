@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:al_ruby_ecommerce/presentation/providers/providers.dart';
@@ -15,12 +17,27 @@ class ProductDetailScreen extends ConsumerStatefulWidget {
 class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
   int _activeImageIndex = 0;
   bool _isZoomed = false;
-  String _selectedSize = '6 ML'; // Default size selector as in Screen 3
+  String? _selectedSize;
 
   @override
   Widget build(BuildContext context) {
     final productsAsync = ref.watch(adminProductsProvider);
     final wishlist = ref.watch(wishlistProvider);
+
+    // Capture referral code if present in the URL query parameters
+    final routerState = GoRouterState.of(context);
+    final urlRefCode = routerState.uri.queryParameters['ref'];
+    if (urlRefCode != null && urlRefCode.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final currentReferrals = ref.read(productReferralsProvider);
+        if (currentReferrals[widget.productId] != urlRefCode) {
+          ref.read(productReferralsProvider.notifier).update((state) => {
+            ...state,
+            widget.productId: urlRefCode,
+          });
+        }
+      });
+    }
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.background,
@@ -44,6 +61,9 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
             return const Center(child: Text('Product not found'));
           }
           final product = products[productIndex];
+          if (product.variants.isNotEmpty && _selectedSize == null) {
+            _selectedSize = product.variants.first.size;
+          }
           final isFav = wishlist.any((p) => p.id == product.id);
 
           final relatedProducts = products
@@ -190,7 +210,26 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
   }
 
   Widget _buildInfoSection(Product product, bool isFav) {
-    final user = ref.read(currentUserDetailsProvider);
+    final user = ref.watch(currentUserDetailsProvider);
+
+    // Resolve variant-specific or top-level details
+    double displayMrp = product.mrp;
+    double displayPrice = product.sellingPrice;
+    int displayStock = product.stock;
+
+    if (product.variants.isNotEmpty && _selectedSize != null) {
+      final selectedVariant = product.variants.firstWhere(
+        (v) => v.size == _selectedSize,
+        orElse: () => product.variants.first,
+      );
+      displayMrp = selectedVariant.mrp;
+      displayPrice = selectedVariant.sellingPrice;
+      displayStock = selectedVariant.stock;
+    }
+
+    final double displayDiscount = displayMrp > displayPrice
+        ? ((displayMrp - displayPrice) / displayMrp) * 100
+        : 0.0;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -232,84 +271,139 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
             height: 1.2,
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 16),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.baseline,
+          textBaseline: TextBaseline.alphabetic,
+          children: [
+            Text(
+              '₹${displayPrice.toStringAsFixed(0)}',
+              style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white),
+            ),
+            if (displayMrp > displayPrice) ...[
+              const SizedBox(width: 12),
+              Text(
+                'MRP ₹${displayMrp.toStringAsFixed(0)}',
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey,
+                  decoration: TextDecoration.lineThrough,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                '(${displayDiscount.toStringAsFixed(0)}% OFF)',
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.red,
+                ),
+              ),
+            ],
+          ],
+        ),
+
+        // Size / Quantity Selector
+        if (product.variants.isNotEmpty) ...[
+          const SizedBox(height: 24),
+          const Text('Select Size / Quantity', style: TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: product.variants.map((variant) {
+              final isSelected = _selectedSize == variant.size;
+              return InkWell(
+                onTap: () {
+                  setState(() {
+                    _selectedSize = variant.size;
+                  });
+                },
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? Theme.of(context).colorScheme.primary
+                        : Theme.of(context).colorScheme.surface,
+                    border: Border.all(
+                      color: isSelected
+                          ? Theme.of(context).colorScheme.primary
+                          : const Color(0xFF05372B),
+                      width: 1.5,
+                    ),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        variant.size,
+                        style: TextStyle(
+                          color: isSelected ? const Color(0xFF011E16) : Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '₹${variant.sellingPrice.toStringAsFixed(0)}',
+                        style: TextStyle(
+                          color: isSelected
+                              ? const Color(0xFF011E16).withOpacity(0.8)
+                              : const Color(0xFFC6A473),
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+
+        const SizedBox(height: 20),
         Row(
           children: [
-            const Icon(Icons.star, color: Colors.amber, size: 16),
-            const SizedBox(width: 4),
-            const Text(
-              '4.8',
-              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 13),
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                color: displayStock > 0 ? Colors.green : Colors.red,
+                shape: BoxShape.circle,
+              ),
             ),
             const SizedBox(width: 8),
             Text(
-              '(256 Reviews)',
-              style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 12),
+              displayStock > 0 ? 'In Stock ($displayStock units available)' : 'Out of Stock',
+              style: TextStyle(
+                color: displayStock > 0 ? Colors.green : Colors.red,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ],
         ),
-        const SizedBox(height: 12),
-        // Custom Badges (Long Lasting & Premium Quality)
-        Row(
-          children: [
-            _buildInfoBadge(Icons.timer_outlined, 'Long Lasting'),
-            const SizedBox(width: 12),
-            _buildInfoBadge(Icons.workspace_premium_outlined, 'Premium Quality'),
-          ],
-        ),
-        const SizedBox(height: 20),
-
-        // Size Selector
-        const Text('Size', style: TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
-        Row(
-          children: ['3 ML', '6 ML', '12 ML'].map((size) {
-            final isSelected = _selectedSize == size;
-            return Padding(
-              padding: const EdgeInsets.only(right: 12.0),
-              child: InkWell(
-                onTap: () {
-                  setState(() {
-                    _selectedSize = size;
-                  });
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: isSelected ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.surface,
-                    border: Border.all(color: const Color(0xFF05372B)),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    size,
-                    style: TextStyle(
-                      color: isSelected ? const Color(0xFF011E16) : Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-            );
-          }).toList(),
-        ),
 
         const SizedBox(height: 24),
-        Text(
-          '₹${product.sellingPrice.toStringAsFixed(0)}',
-          style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white),
-        ),
-        const SizedBox(height: 20),
-
         // Action Buttons: Add to Cart and Buy Now
         Row(
           children: [
             Expanded(
               child: OutlinedButton(
-                onPressed: product.stock > 0
+                onPressed: displayStock > 0
                     ? () {
-                        ref.read(cartProvider.notifier).addItem(product);
+                        ref.read(cartProvider.notifier).addItem(product, selectedVariantSize: _selectedSize);
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('${product.name} added to cart')),
+                          SnackBar(
+                            content: Text(
+                              _selectedSize != null
+                                  ? '${product.name} ($_selectedSize) added to cart'
+                                  : '${product.name} added to cart',
+                            ),
+                          ),
                         );
                       }
                     : null,
@@ -319,9 +413,9 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
             const SizedBox(width: 16),
             Expanded(
               child: ElevatedButton(
-                onPressed: product.stock > 0
+                onPressed: displayStock > 0
                     ? () {
-                        ref.read(cartProvider.notifier).addItem(product);
+                        ref.read(cartProvider.notifier).addItem(product, selectedVariantSize: _selectedSize);
                         context.push('/cart');
                       }
                     : null,
@@ -338,23 +432,92 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
           product.description,
           style: const TextStyle(fontSize: 13, color: Colors.grey, height: 1.5),
         ),
+        const SizedBox(height: 24),
+        _buildShareSection(product, user),
       ],
     );
   }
 
-  Widget _buildInfoBadge(IconData icon, String label) {
+  String _generateProductLink(String productId, String? referralCode) {
+    String baseUrl = 'https://alrubyback.web.app';
+    if (kIsWeb) {
+      final origin = Uri.base.origin;
+      baseUrl = origin;
+    }
+    
+    final currentUrlStr = kIsWeb ? Uri.base.toString() : '';
+    final hasHash = currentUrlStr.contains('/#/');
+    final String path = hasHash ? '/#/product/$productId' : '/product/$productId';
+    
+    if (referralCode != null && referralCode.isNotEmpty) {
+      return '$baseUrl$path?ref=$referralCode';
+    } else {
+      return '$baseUrl$path';
+    }
+  }
+
+  Widget _buildShareSection(Product product, user) {
+    final hasReferral = user != null && user.referralCode.isNotEmpty;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF022B20),
-        borderRadius: BorderRadius.circular(4),
+        color: const Color(0xFF05372B).withOpacity(0.3),
+        border: Border.all(color: const Color(0xFFC6A473).withOpacity(0.4)),
+        borderRadius: BorderRadius.circular(12),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: const Color(0xFFC6A473), size: 14),
-          const SizedBox(width: 4),
-          Text(label, style: const TextStyle(color: Colors.white, fontSize: 11)),
+          Row(
+            children: [
+              const Icon(Icons.share_outlined, color: Color(0xFFC6A473)),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  hasReferral ? 'Share & Earn 5% Commission!' : 'Share Product',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFFC6A473),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            hasReferral
+                ? 'Share this product link. If anyone buys through this link, you\'ll receive a 5% commission!'
+                : 'Share this product with your friends. Log in to earn 5% commission on their purchases!',
+            style: const TextStyle(fontSize: 12, color: Colors.white70),
+          ),
+          const SizedBox(height: 12),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFC6A473),
+              foregroundColor: const Color(0xFF011E16),
+              minimumSize: const Size.fromHeight(40),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () {
+              final refCode = hasReferral ? user.referralCode : null;
+              final link = _generateProductLink(product.id, refCode);
+              
+              Clipboard.setData(ClipboardData(text: link));
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(hasReferral 
+                      ? 'Referral link copied to clipboard!' 
+                      : 'Product link copied to clipboard!'),
+                ),
+              );
+            },
+            icon: const Icon(Icons.copy_outlined, size: 18),
+            label: Text(
+              hasReferral ? 'COPY REFERRAL LINK' : 'COPY PRODUCT LINK',
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+            ),
+          ),
         ],
       ),
     );

@@ -4,6 +4,22 @@ class UserModel {
   final String email;
   final String role; // 'admin' or 'customer'
   final List<String> wishlist;
+  
+  // Marketing & Commission details
+  final String phoneNumber;
+  final String upiId;
+  final double totalEarned;
+  final double totalPaid;
+  final String referralCode;
+  final bool withdrawalRequested;
+  final double withdrawalRequestedAmount;
+
+  // Saved Address Details
+  final String savedHouseStreet;
+  final String savedCity;
+  final String savedDistrict;
+  final String savedState;
+  final String savedPinCode;
 
   UserModel({
     required this.id,
@@ -11,15 +27,50 @@ class UserModel {
     required this.email,
     required this.role,
     required this.wishlist,
+    this.phoneNumber = '',
+    this.upiId = '',
+    this.totalEarned = 0.0,
+    this.totalPaid = 0.0,
+    this.referralCode = '',
+    this.withdrawalRequested = false,
+    this.withdrawalRequestedAmount = 0.0,
+    this.savedHouseStreet = '',
+    this.savedCity = '',
+    this.savedDistrict = '',
+    this.savedState = '',
+    this.savedPinCode = '',
   });
 
+  double get walletBalance => totalEarned - totalPaid;
+
+  static String generateReferralCode(String name, String uid) {
+    final cleanName = name.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '').toUpperCase();
+    final prefix = cleanName.length > 4 ? cleanName.substring(0, 4) : (cleanName.isEmpty ? 'USER' : cleanName);
+    final suffix = uid.length > 4 ? uid.substring(uid.length - 4) : uid;
+    return '$prefix$suffix'.toUpperCase();
+  }
+
   factory UserModel.fromMap(String id, Map<String, dynamic> map) {
+    final name = map['name'] ?? '';
+    final refCode = map['referralCode'] ?? generateReferralCode(name, id);
     return UserModel(
       id: id,
-      name: map['name'] ?? '',
+      name: name,
       email: map['email'] ?? '',
       role: map['role'] ?? 'customer',
       wishlist: List<String>.from(map['wishlist'] ?? []),
+      phoneNumber: map['phoneNumber'] ?? '',
+      upiId: map['upiId'] ?? '',
+      totalEarned: (map['totalEarned'] as num?)?.toDouble() ?? 0.0,
+      totalPaid: (map['totalPaid'] as num?)?.toDouble() ?? 0.0,
+      referralCode: refCode,
+      withdrawalRequested: map['withdrawalRequested'] ?? false,
+      withdrawalRequestedAmount: (map['withdrawalRequestedAmount'] as num?)?.toDouble() ?? 0.0,
+      savedHouseStreet: map['savedHouseStreet'] ?? '',
+      savedCity: map['savedCity'] ?? '',
+      savedDistrict: map['savedDistrict'] ?? '',
+      savedState: map['savedState'] ?? '',
+      savedPinCode: map['savedPinCode'] ?? '',
     );
   }
 
@@ -29,6 +80,18 @@ class UserModel {
       'email': email,
       'role': role,
       'wishlist': wishlist,
+      'phoneNumber': phoneNumber,
+      'upiId': upiId,
+      'totalEarned': totalEarned,
+      'totalPaid': totalPaid,
+      'referralCode': referralCode,
+      'withdrawalRequested': withdrawalRequested,
+      'withdrawalRequestedAmount': withdrawalRequestedAmount,
+      'savedHouseStreet': savedHouseStreet,
+      'savedCity': savedCity,
+      'savedDistrict': savedDistrict,
+      'savedState': savedState,
+      'savedPinCode': savedPinCode,
     };
   }
 
@@ -38,6 +101,18 @@ class UserModel {
     String? email,
     String? role,
     List<String>? wishlist,
+    String? phoneNumber,
+    String? upiId,
+    double? totalEarned,
+    double? totalPaid,
+    String? referralCode,
+    bool? withdrawalRequested,
+    double? withdrawalRequestedAmount,
+    String? savedHouseStreet,
+    String? savedCity,
+    String? savedDistrict,
+    String? savedState,
+    String? savedPinCode,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -45,6 +120,18 @@ class UserModel {
       email: email ?? this.email,
       role: role ?? this.role,
       wishlist: wishlist ?? this.wishlist,
+      phoneNumber: phoneNumber ?? this.phoneNumber,
+      upiId: upiId ?? this.upiId,
+      totalEarned: totalEarned ?? this.totalEarned,
+      totalPaid: totalPaid ?? this.totalPaid,
+      referralCode: referralCode ?? this.referralCode,
+      withdrawalRequested: withdrawalRequested ?? this.withdrawalRequested,
+      withdrawalRequestedAmount: withdrawalRequestedAmount ?? this.withdrawalRequestedAmount,
+      savedHouseStreet: savedHouseStreet ?? this.savedHouseStreet,
+      savedCity: savedCity ?? this.savedCity,
+      savedDistrict: savedDistrict ?? this.savedDistrict,
+      savedState: savedState ?? this.savedState,
+      savedPinCode: savedPinCode ?? this.savedPinCode,
     );
   }
 }

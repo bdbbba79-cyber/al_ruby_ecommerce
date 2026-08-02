@@ -292,11 +292,11 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                       ),
                       child: Row(
                         children: [
-                          if (item.product.imageUrls.isNotEmpty)
+                          if (item.product.images.isNotEmpty)
                             ClipRRect(
                               borderRadius: BorderRadius.circular(4),
                               child: Image.network(
-                                item.product.imageUrls.first,
+                                item.product.images.first,
                                 width: 40,
                                 height: 40,
                                 fit: BoxFit.cover,
@@ -390,10 +390,10 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            if (p.imageUrls.isNotEmpty) ...[
+                            if (p.images.isNotEmpty) ...[
                               ClipRRect(
                                 borderRadius: BorderRadius.circular(2),
-                                child: Image.network(p.imageUrls.first, width: 18, height: 18, fit: BoxFit.cover),
+                                child: Image.network(p.images.first, width: 18, height: 18, fit: BoxFit.cover),
                               ),
                               const SizedBox(width: 6),
                             ],

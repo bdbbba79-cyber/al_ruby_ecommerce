@@ -457,7 +457,10 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
   }
 
   Widget _buildShareSection(Product product, user) {
-    final hasReferral = user != null && user.referralCode.isNotEmpty;
+    if (user == null || user.referralCode.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -468,14 +471,14 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          const Row(
             children: [
-              const Icon(Icons.share_outlined, color: Color(0xFFC6A473)),
-              const SizedBox(width: 10),
+              Icon(Icons.share_outlined, color: Color(0xFFC6A473)),
+              SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  hasReferral ? 'Share & Earn 5% Commission!' : 'Share Product',
-                  style: const TextStyle(
+                  'Share & Earn 5% Commission!',
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFFC6A473),
@@ -485,11 +488,9 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
             ],
           ),
           const SizedBox(height: 8),
-          Text(
-            hasReferral
-                ? 'Share this product link. If anyone buys through this link, you\'ll receive a 5% commission!'
-                : 'Share this product with your friends. Log in to earn 5% commission on their purchases!',
-            style: const TextStyle(fontSize: 12, color: Colors.white70),
+          const Text(
+            'Share this product link. If anyone buys through this link, you\'ll receive a 5% commission!',
+            style: TextStyle(fontSize: 12, color: Colors.white70),
           ),
           const SizedBox(height: 12),
           ElevatedButton.icon(
@@ -500,22 +501,19 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
             onPressed: () {
-              final refCode = hasReferral ? user.referralCode : null;
-              final link = _generateProductLink(product.id, refCode);
+              final link = _generateProductLink(product.id, user.referralCode);
               
               Clipboard.setData(ClipboardData(text: link));
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(hasReferral 
-                      ? 'Referral link copied to clipboard!' 
-                      : 'Product link copied to clipboard!'),
+                const SnackBar(
+                  content: Text('Referral link copied to clipboard!'),
                 ),
               );
             },
             icon: const Icon(Icons.copy_outlined, size: 18),
-            label: Text(
-              hasReferral ? 'COPY REFERRAL LINK' : 'COPY PRODUCT LINK',
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+            label: const Text(
+              'COPY REFERRAL LINK',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
             ),
           ),
         ],

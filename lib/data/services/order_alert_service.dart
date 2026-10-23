@@ -78,10 +78,24 @@ class OrderAlertService {
         await _audioPlayer.stop();
         await _audioPlayer.setReleaseMode(ReleaseMode.loop);
         await _audioPlayer.setVolume(1.0);
-        await _audioPlayer.play(AssetSource('sounds/soundreality-siren-a-248662.mp3'));
+        if (kIsWeb) {
+          // On Web, use absolute root-relative URL to avoid routing path resolution issues
+          await _audioPlayer.play(UrlSource('/assets/assets/sounds/soundreality-siren-a-248662.mp3'));
+        } else {
+          await _audioPlayer.play(AssetSource('sounds/soundreality-siren-a-248662.mp3'));
+        }
       } catch (e) {
-        debugPrint('Failed to play order alert sound: $e');
-        SystemSound.play(SystemSoundType.alert);
+        debugPrint('Failed to play primary order alert sound: $e');
+        try {
+          if (kIsWeb) {
+            await _audioPlayer.play(UrlSource('/sounds/soundreality-siren-a-248662.mp3'));
+          } else {
+            await _audioPlayer.play(AssetSource('sounds/order_alert.wav'));
+          }
+        } catch (e2) {
+          debugPrint('Fallback play failed: $e2');
+          SystemSound.play(SystemSoundType.alert);
+        }
       }
     }
 

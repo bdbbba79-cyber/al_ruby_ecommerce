@@ -46,5 +46,6 @@ app.*.map.json
 
 # Binaries & Firebase cache
 *.apk
+*.bak
 .firebase/
 

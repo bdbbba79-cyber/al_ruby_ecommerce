@@ -47,29 +47,28 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyAJHncmzFDUs4kDfELpmbtLHrJjpT_jz3Y',
-    appId: '1:850326169710:web:cdb43bff428e65478dde7f',
-    messagingSenderId: '850326169710',
-    projectId: 'alrubyback',
-    authDomain: 'alrubyback.firebaseapp.com',
-    storageBucket: 'alrubyback.firebasestorage.app',
-    measurementId: 'G-KZCPMNXZBB',
+    apiKey: 'AIzaSyApVeCDb4n8gKgDDF3OVLlLcFj1iH13zxo',
+    appId: '1:1092018996574:web:ae19fc2db5056dfb56bbcf',
+    messagingSenderId: '1092018996574',
+    projectId: 'webcart-store-945ab',
+    authDomain: 'webcart-store-945ab.firebaseapp.com',
+    storageBucket: 'webcart-store-945ab.firebasestorage.app',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyAb6gZCGOjX5X5TUKH_CB2dUPyRIXFx-Xk',
-    appId: '1:850326169710:android:a50b751bef999fbb8dde7f',
-    messagingSenderId: '850326169710',
-    projectId: 'alrubyback',
-    storageBucket: 'alrubyback.firebasestorage.app',
+    apiKey: 'AIzaSyApVeCDb4n8gKgDDF3OVLlLcFj1iH13zxo',
+    appId: '1:1092018996574:android:ae19fc2db5056dfb56bbcf',
+    messagingSenderId: '1092018996574',
+    projectId: 'webcart-store-945ab',
+    storageBucket: 'webcart-store-945ab.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyBIdqGZLBYgcGCnaHbk2KTQwz4BI4S9Fh0',
-    appId: '1:850326169710:ios:74930aef1ad8102d8dde7f',
-    messagingSenderId: '850326169710',
-    projectId: 'alrubyback',
-    storageBucket: 'alrubyback.firebasestorage.app',
-    iosBundleId: 'com.alruby.perfumes.alRubyEcommerce',
+    apiKey: 'AIzaSyApVeCDb4n8gKgDDF3OVLlLcFj1iH13zxo',
+    appId: '1:1092018996574:ios:ae19fc2db5056dfb56bbcf',
+    messagingSenderId: '1092018996574',
+    projectId: 'webcart-store-945ab',
+    storageBucket: 'webcart-store-945ab.firebasestorage.app',
+    iosBundleId: 'com.webcart.store',
   );
 }

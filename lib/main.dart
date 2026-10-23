@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:al_ruby_ecommerce/firebase_options.dart';
@@ -13,6 +14,19 @@ import 'package:al_ruby_ecommerce/core/routing/url_strategy.dart'
 void main() async {
   configureUrlStrategy();
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Enable true edge-to-edge display mode for all Android versions
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light,
+      statusBarBrightness: Brightness.dark,
+      systemNavigationBarColor: Colors.transparent,
+      systemNavigationBarDividerColor: Colors.transparent,
+      systemNavigationBarIconBrightness: Brightness.light,
+    ),
+  );
   
   // Try initializing Firebase, log error but allow running (for local UI development)
   try {
@@ -27,13 +41,13 @@ void main() async {
 
   runApp(
     const ProviderScope(
-      child: AlRubyApp(),
+      child: IzzfahNoobiApp(),
     ),
   );
 }
 
-class AlRubyApp extends ConsumerWidget {
-  const AlRubyApp({super.key});
+class IzzfahNoobiApp extends ConsumerWidget {
+  const IzzfahNoobiApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -47,7 +61,7 @@ class AlRubyApp extends ConsumerWidget {
     });
 
     return MaterialApp.router(
-      title: 'Al Ruby Perfumes',
+      title: 'IZZFAH NOOBI',
       theme: AppTheme.lightTheme,
       routerConfig: router,
       debugShowCheckedModeBanner: false,

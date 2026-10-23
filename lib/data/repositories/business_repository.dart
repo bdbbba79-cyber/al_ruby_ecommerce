@@ -7,6 +7,16 @@ class BusinessRepository {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final StoreRepository _storeRepo = StoreRepository();
 
+  static final BusinessInfo _defaultInfo = BusinessInfo(
+    companyName: 'IZZFAH NOOBI',
+    companyLogoUrl: '',
+    address: 'Erumathadam Malappuram - 679338',
+    mobileNumber: '9400859846',
+    whatsappNumber: '919656978468',
+    email: 'support@izzfahnoobi.com',
+    upiId: 'ismuchelembra-0002@oksbi',
+  );
+
   Stream<BusinessInfo> watchBusinessInfo() {
     return _firestore
         .collection('business_information')
@@ -16,15 +26,9 @@ class BusinessRepository {
       if (snapshot.exists && snapshot.data() != null) {
         return BusinessInfo.fromMap(snapshot.data()!);
       }
-      return BusinessInfo(
-        companyName: 'Al Ruby Perfumes',
-        companyLogoUrl: '',
-        address: 'Erumathadam Malappuram - 679338',
-        mobileNumber: '9400859846',
-        whatsappNumber: '9656978468',
-        email: 'info@alrubyperfumes.com',
-        upiId: 'ismuchelembra-0002@oksbi',
-      );
+      return _defaultInfo;
+    }).handleError((error) {
+      return _defaultInfo;
     });
   }
 
@@ -34,12 +38,12 @@ class BusinessRepository {
       return BusinessInfo.fromMap(doc.data()!);
     }
     return BusinessInfo(
-      companyName: 'Al Ruby Perfumes',
+      companyName: 'IZZFAH NOOBI',
       companyLogoUrl: '',
       address: 'Erumathadam Malappuram - 679338',
       mobileNumber: '9400859846',
-      whatsappNumber: '9656978468',
-      email: 'info@alrubyperfumes.com',
+      whatsappNumber: '919656978468',
+      email: 'support@izzfahnoobi.com',
       upiId: 'ismuchelembra-0002@oksbi',
     );
   }

@@ -12,11 +12,19 @@ class Category {
   });
 
   factory Category.fromMap(String id, Map<String, dynamic> map) {
+    final rawUrl = map['imageUrl'] ??
+        map['image'] ??
+        map['photo'] ??
+        map['photoUrl'] ??
+        map['image_url'] ??
+        map['icon'] ??
+        map['url'] ??
+        '';
     return Category(
       id: id,
-      name: map['name'] ?? '',
-      imageUrl: map['imageUrl'] ?? '',
-      description: map['description'] ?? '',
+      name: (map['name'] ?? '').toString(),
+      imageUrl: rawUrl.toString().trim(),
+      description: (map['description'] ?? '').toString(),
     );
   }
 

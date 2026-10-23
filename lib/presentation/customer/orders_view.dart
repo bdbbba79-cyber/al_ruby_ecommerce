@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:al_ruby_ecommerce/presentation/providers/providers.dart';
 import 'package:al_ruby_ecommerce/data/models/order.dart';
+import 'package:al_ruby_ecommerce/presentation/widgets/app_network_image.dart';
 
 class OrdersView extends ConsumerStatefulWidget {
   const OrdersView({super.key});
@@ -157,19 +158,19 @@ class _OrdersViewState extends ConsumerState<OrdersView> {
                       children: [
                         Text(
                           'Order #$shortOrderId',
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0F172A)),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           formattedDate,
-                          style: const TextStyle(color: Colors.grey, fontSize: 12),
+                          style: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
                         ),
                       ],
                     ),
                     _buildStatusBadge(order.orderStatus),
                   ],
                 ),
-                const Divider(height: 24, color: Color(0xFF05372B)),
+                const Divider(height: 24, color: Color(0xFFE2E8F0)),
 
                 // Item Details & Horizontal Images Row
                 Row(
@@ -189,15 +190,17 @@ class _OrdersViewState extends ConsumerState<OrdersView> {
                                 height: 50,
                                 width: 50,
                                 decoration: BoxDecoration(
-                                  border: Border.all(color: const Color(0xFF05372B), width: 1.5),
+                                  border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(4),
-                                  child: item.imageUrl.isNotEmpty
-                                      ? Image.network(item.imageUrl, fit: BoxFit.cover)
-                                      : const Icon(Icons.image_not_supported_outlined, size: 20),
-                                ),
+                                child: item.imageUrl.isNotEmpty
+                                    ? AppNetworkImage.thumbnail(
+                                        imageUrl: item.imageUrl,
+                                        size: 50,
+                                        fit: BoxFit.cover,
+                                        borderRadius: BorderRadius.circular(4),
+                                      )
+                                    : const Icon(Icons.image_not_supported_outlined, size: 20),
                               ),
                             );
                           },
@@ -210,7 +213,7 @@ class _OrdersViewState extends ConsumerState<OrdersView> {
                         padding: const EdgeInsets.only(left: 8.0, right: 12.0),
                         child: Text(
                           '+${order.items.length - 3}',
-                          style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 14),
+                          style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0F172A), fontSize: 14),
                         ),
                       ),
                     
@@ -222,7 +225,7 @@ class _OrdersViewState extends ConsumerState<OrdersView> {
                       children: [
                         Text(
                           'Total: ₹${order.grandTotal.toStringAsFixed(0)}',
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.white),
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF0F172A)),
                         ),
                         const SizedBox(height: 4),
                         InkWell(
@@ -304,12 +307,12 @@ class _OrdersViewState extends ConsumerState<OrdersView> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Order ID: ${order.id}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 13)),
+                  Text('Order ID: ${order.id}', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0F172A), fontSize: 13)),
                   const SizedBox(height: 8),
-                  Text('Payment Method: ${order.paymentMethod}', style: const TextStyle(color: Colors.grey)),
-                  Text('Payment Status: ${order.paymentStatus}', style: const TextStyle(color: Colors.grey)),
-                  const Divider(color: Color(0xFF05372B), height: 24),
-                  const Text('Items:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                  Text('Payment Method: ${order.paymentMethod}', style: const TextStyle(color: Color(0xFF64748B))),
+                  Text('Payment Status: ${order.paymentStatus}', style: const TextStyle(color: Color(0xFF64748B))),
+                  const Divider(color: Color(0xFFE2E8F0), height: 24),
+                  const Text('Items:', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
                   const SizedBox(height: 8),
                   ListView.builder(
                     shrinkWrap: true,
@@ -322,18 +325,18 @@ class _OrdersViewState extends ConsumerState<OrdersView> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Expanded(child: Text(item.productName, style: const TextStyle(color: Colors.white))),
-                            Text('${item.quantity} x ₹${item.price.toStringAsFixed(0)}', style: const TextStyle(color: Colors.grey)),
+                            Expanded(child: Text(item.productName, style: const TextStyle(color: Color(0xFF0F172A)))),
+                            Text('${item.quantity} x ₹${item.price.toStringAsFixed(0)}', style: const TextStyle(color: Color(0xFF64748B))),
                           ],
                         ),
                       );
                     },
                   ),
-                  const Divider(color: Color(0xFF05372B), height: 24),
+                  const Divider(color: Color(0xFFE2E8F0), height: 24),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Grand Total:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                      const Text('Grand Total:', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
                       Text('₹${order.grandTotal.toStringAsFixed(0)}', style: TextStyle(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary, fontSize: 16)),
                     ],
                   ),
@@ -344,7 +347,7 @@ class _OrdersViewState extends ConsumerState<OrdersView> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Close', style: TextStyle(color: Colors.white)),
+              child: Text('Close', style: TextStyle(color: Theme.of(context).colorScheme.primary)),
             ),
           ],
         );

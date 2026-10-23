@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:al_ruby_ecommerce/presentation/providers/providers.dart';
 import 'package:al_ruby_ecommerce/data/models/product.dart';
+import 'package:al_ruby_ecommerce/presentation/widgets/app_network_image.dart';
 
 class ProductDetailScreen extends ConsumerStatefulWidget {
   final String productId;
@@ -100,12 +101,12 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                               ],
                             ),
                       const SizedBox(height: 32),
-                      const Divider(color: Color(0xFF05372B)),
+                      const Divider(color: Color(0xFFE2E8F0)),
                       const SizedBox(height: 24),
                       if (relatedProducts.isNotEmpty) ...[
                         const Text(
                           'You May Also Like',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
                         ),
                         const SizedBox(height: 16),
                         _buildRelatedProductsGrid(relatedProducts),
@@ -155,7 +156,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFF05372B)),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
             ),
             clipBehavior: Clip.antiAlias,
             child: InteractiveViewer(
@@ -163,9 +164,10 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
               scaleEnabled: _isZoomed,
               minScale: 1.0,
               maxScale: 3.0,
-              child: Image.network(
-                imageUrl,
+              child: AppNetworkImage(
+                imageUrl: imageUrl,
                 fit: _isZoomed ? BoxFit.none : BoxFit.contain,
+                cacheWidth: 1000,
               ),
             ),
           ),
@@ -192,13 +194,17 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                       width: 60,
                       decoration: BoxDecoration(
                         border: Border.all(
-                          color: isSelected ? Theme.of(context).colorScheme.primary : const Color(0xFF05372B),
+                          color: isSelected ? Theme.of(context).colorScheme.primary : const Color(0xFFE2E8F0),
                           width: 2,
                         ),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       clipBehavior: Clip.antiAlias,
-                      child: Image.network(product.images[index], fit: BoxFit.cover),
+                      child: AppNetworkImage.thumbnail(
+                        imageUrl: product.images[index],
+                        size: 60,
+                        fit: BoxFit.cover,
+                      ),
                     ),
                   ),
                 );
@@ -242,14 +248,14 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
               style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFFC6A473),
+                color: Color(0xFF1E60D5),
                 letterSpacing: 1.5,
               ),
             ),
             IconButton(
               icon: Icon(
                 isFav ? Icons.favorite : Icons.favorite_border,
-                color: isFav ? Colors.red : Colors.white,
+                color: isFav ? Colors.red : const Color(0xFF64748B),
               ),
               onPressed: () {
                 if (user == null) {
@@ -267,7 +273,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
           style: const TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: Color(0xFF0F172A),
             height: 1.2,
           ),
         ),
@@ -278,7 +284,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
           children: [
             Text(
               '₹${displayPrice.toStringAsFixed(0)}',
-              style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white),
+              style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF1E60D5)),
             ),
             if (displayMrp > displayPrice) ...[
               const SizedBox(width: 12),
@@ -303,10 +309,10 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
           ],
         ),
 
-        // Size / Quantity Selector
+        // Size / Option Selector
         if (product.variants.isNotEmpty) ...[
           const SizedBox(height: 24),
-          const Text('Select Size / Quantity', style: TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold)),
+          const Text('Select Size / Option', style: TextStyle(color: Color(0xFF64748B), fontSize: 12, fontWeight: FontWeight.bold)),
           const SizedBox(height: 10),
           Wrap(
             spacing: 12,
@@ -323,13 +329,9 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                   decoration: BoxDecoration(
-                    color: isSelected
-                        ? Theme.of(context).colorScheme.primary
-                        : Theme.of(context).colorScheme.surface,
+                    color: isSelected ? const Color(0xFF1E60D5) : Colors.white,
                     border: Border.all(
-                      color: isSelected
-                          ? Theme.of(context).colorScheme.primary
-                          : const Color(0xFF05372B),
+                      color: isSelected ? const Color(0xFF1E60D5) : const Color(0xFFCBD5E1),
                       width: 1.5,
                     ),
                     borderRadius: BorderRadius.circular(8),
@@ -340,7 +342,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                       Text(
                         variant.size,
                         style: TextStyle(
-                          color: isSelected ? const Color(0xFF011E16) : Colors.white,
+                          color: isSelected ? Colors.white : const Color(0xFF0F172A),
                           fontWeight: FontWeight.bold,
                           fontSize: 13,
                         ),
@@ -349,9 +351,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                       Text(
                         '₹${variant.sellingPrice.toStringAsFixed(0)}',
                         style: TextStyle(
-                          color: isSelected
-                              ? const Color(0xFF011E16).withOpacity(0.8)
-                              : const Color(0xFFC6A473),
+                          color: isSelected ? Colors.white.withOpacity(0.9) : const Color(0xFF1E60D5),
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
                         ),
@@ -426,11 +426,11 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
         ),
 
         const SizedBox(height: 24),
-        const Text('Product Description', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+        const Text('Product Description', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
         const SizedBox(height: 8),
         Text(
           product.description,
-          style: const TextStyle(fontSize: 13, color: Colors.grey, height: 1.5),
+          style: const TextStyle(fontSize: 13, color: Color(0xFF475569), height: 1.5),
         ),
         const SizedBox(height: 24),
         _buildShareSection(product, user),
@@ -439,7 +439,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
   }
 
   String _generateProductLink(String productId, String? referralCode) {
-    String baseUrl = 'https://alrubyback.web.app';
+    String baseUrl = 'https://webcart-store-945ab.web.app';
     if (kIsWeb) {
       final origin = Uri.base.origin;
       baseUrl = origin;
@@ -464,8 +464,8 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF05372B).withOpacity(0.3),
-        border: Border.all(color: const Color(0xFFC6A473).withOpacity(0.4)),
+        color: const Color(0xFFEFF6FF),
+        border: Border.all(color: const Color(0xFFBFDBFE)),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -473,7 +473,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
         children: [
           const Row(
             children: [
-              Icon(Icons.share_outlined, color: Color(0xFFC6A473)),
+              Icon(Icons.share_outlined, color: Color(0xFF1E60D5)),
               SizedBox(width: 10),
               Expanded(
                 child: Text(
@@ -481,7 +481,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFFC6A473),
+                    color: Color(0xFF1E60D5),
                   ),
                 ),
               ),
@@ -490,13 +490,13 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
           const SizedBox(height: 8),
           const Text(
             'Share this product link. If anyone buys through this link, you\'ll receive a 5% commission!',
-            style: TextStyle(fontSize: 12, color: Colors.white70),
+            style: TextStyle(fontSize: 12, color: Color(0xFF475569)),
           ),
           const SizedBox(height: 12),
           ElevatedButton.icon(
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFC6A473),
-              foregroundColor: const Color(0xFF011E16),
+              backgroundColor: const Color(0xFF1E60D5),
+              foregroundColor: Colors.white,
               minimumSize: const Size.fromHeight(40),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
@@ -538,9 +538,9 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
               child: Container(
                 width: 140,
                 decoration: BoxDecoration(
-                  border: Border.all(color: const Color(0xFF05372B)),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
                   borderRadius: BorderRadius.circular(12),
-                  color: Theme.of(context).colorScheme.surface,
+                  color: Colors.white,
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: Column(
@@ -548,8 +548,8 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                   children: [
                     Expanded(
                       child: p.images.isNotEmpty
-                          ? Image.network(p.images.first, fit: BoxFit.cover)
-                          : Container(color: Colors.grey.shade800),
+                          ? AppNetworkImage.card(imageUrl: p.images.first, fit: BoxFit.cover)
+                          : Container(color: const Color(0xFFF1F5F9)),
                     ),
                     Padding(
                       padding: const EdgeInsets.all(8.0),
@@ -558,14 +558,14 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                         children: [
                           Text(
                             p.name,
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.white),
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF0F172A)),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 4),
                           Text(
                             '₹${p.sellingPrice.toStringAsFixed(0)}',
-                            style: const TextStyle(color: Color(0xFFC6A473), fontWeight: FontWeight.bold, fontSize: 12),
+                            style: const TextStyle(color: Color(0xFF1E60D5), fontWeight: FontWeight.bold, fontSize: 12),
                           ),
                         ],
                       ),

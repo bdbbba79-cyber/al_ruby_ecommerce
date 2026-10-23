@@ -4,6 +4,7 @@ import 'package:al_ruby_ecommerce/presentation/admin/admin_layout.dart';
 import 'package:al_ruby_ecommerce/presentation/providers/providers.dart';
 import 'package:al_ruby_ecommerce/data/models/user_model.dart';
 import 'package:al_ruby_ecommerce/data/models/product.dart';
+import 'package:al_ruby_ecommerce/presentation/widgets/app_network_image.dart';
 
 class AdminUsersScreen extends ConsumerStatefulWidget {
   const AdminUsersScreen({super.key});
@@ -27,37 +28,118 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
       _amountController.text = user.withdrawalRequestedAmount.toStringAsFixed(0);
     }
 
-    showDialog(
+    AdminLayout.showAdminDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Record Manual Payment for ${user.name}', style: const TextStyle(fontWeight: FontWeight.bold)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+        title: Row(
           children: [
-            Text('UPI ID: ${user.upiId.isNotEmpty ? user.upiId : "Not updated"}', style: const TextStyle(fontWeight: FontWeight.w500)),
-            Text('Phone: ${user.phoneNumber.isNotEmpty ? user.phoneNumber : "Not updated"}'),
-            const SizedBox(height: 8),
-            Text('Current Wallet Balance: ₹${user.walletBalance.toStringAsFixed(2)}', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
-            if (user.withdrawalRequested) ...[
-              const SizedBox(height: 4),
-              Text('Requested Withdrawal: ₹${user.withdrawalRequestedAmount.toStringAsFixed(2)}', style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.bold)),
-            ],
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _amountController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Payment Amount (₹)',
-                hintText: 'Enter amount paid to user',
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0F62FE).withOpacity(0.08),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.payment, color: Color(0xFF0F62FE), size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Record Payment for ${user.name}',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
               ),
             ),
           ],
         ),
+        content: SizedBox(
+          width: 440,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('UPI ID:', style: TextStyle(fontSize: 13, color: Color(0xFF64748B))),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            user.upiId.isNotEmpty ? user.upiId : 'Not configured',
+                            textAlign: TextAlign.end,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A)),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Phone:', style: TextStyle(fontSize: 13, color: Color(0xFF64748B))),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            user.phoneNumber.isNotEmpty ? user.phoneNumber : 'Not set',
+                            textAlign: TextAlign.end,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Current Wallet:', style: TextStyle(fontSize: 13, color: Color(0xFF64748B))),
+                        Text(
+                          '₹${user.walletBalance.toStringAsFixed(2)}',
+                          style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 14),
+                        ),
+                      ],
+                    ),
+                    if (user.withdrawalRequested) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Requested Payout:', style: TextStyle(fontSize: 13, color: Colors.orange, fontWeight: FontWeight.bold)),
+                          Text(
+                            '₹${user.withdrawalRequestedAmount.toStringAsFixed(2)}',
+                            style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.bold, fontSize: 14),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 18),
+              TextFormField(
+                controller: _amountController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Payment Amount (₹)',
+                  hintText: 'Enter amount paid to user',
+                  prefixText: '₹ ',
+                ),
+              ),
+            ],
+          ),
+        ),
         actions: [
-          TextButton(
+          OutlinedButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('CANCEL'),
+            child: const Text('Cancel'),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -83,7 +165,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                 );
               }
             },
-            child: const Text('RECORD PAYMENT'),
+            child: const Text('Record Payment'),
           ),
         ],
       ),
@@ -117,73 +199,102 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
               final isDesktop = MediaQuery.of(context).size.width > 800;
 
               return ListView.builder(
-                padding: const EdgeInsets.all(24.0),
+                padding: EdgeInsets.all(isDesktop ? 24.0 : 12.0),
                 itemCount: sortedUsers.length,
                 itemBuilder: (context, index) {
                   final u = sortedUsers[index];
                   return Card(
                     margin: const EdgeInsets.only(bottom: 16.0),
                     child: Padding(
-                      padding: const EdgeInsets.all(20.0),
+                      padding: EdgeInsets.all(isDesktop ? 20.0 : 14.0),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           // Header Row
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Text(
-                                        u.name,
-                                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                          isDesktop
+                              ? Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Flexible(
+                                                child: Text(
+                                                  u.name,
+                                                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                                decoration: BoxDecoration(
+                                                  color: u.role == 'admin' ? Colors.red.shade50 : Colors.blue.shade50,
+                                                  borderRadius: BorderRadius.circular(12),
+                                                ),
+                                                child: Text(
+                                                  u.role.toUpperCase(),
+                                                  style: TextStyle(
+                                                    color: u.role == 'admin' ? Colors.red : Colors.blue,
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(u.email, style: TextStyle(color: Colors.grey[500], fontSize: 13), overflow: TextOverflow.ellipsis),
+                                        ],
                                       ),
-                                      const SizedBox(width: 8),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                        decoration: BoxDecoration(
-                                          color: u.role == 'admin' ? Colors.red.shade50 : Colors.blue.shade50,
-                                          borderRadius: BorderRadius.circular(12),
-                                        ),
-                                        child: Text(
-                                          u.role.toUpperCase(),
-                                          style: TextStyle(
-                                            color: u.role == 'admin' ? Colors.red : Colors.blue,
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.bold,
+                                    ),
+                                    if (u.withdrawalRequested) ...[
+                                      const SizedBox(width: 12),
+                                      _buildWithdrawalBadge(u),
+                                    ],
+                                  ],
+                                )
+                              : Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            u.name,
+                                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                                            overflow: TextOverflow.ellipsis,
                                           ),
                                         ),
-                                      ),
+                                        const SizedBox(width: 8),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: u.role == 'admin' ? Colors.red.shade50 : Colors.blue.shade50,
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                          child: Text(
+                                            u.role.toUpperCase(),
+                                            style: TextStyle(
+                                              color: u.role == 'admin' ? Colors.red : Colors.blue,
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(u.email, style: TextStyle(color: Colors.grey[500], fontSize: 13), overflow: TextOverflow.ellipsis),
+                                    if (u.withdrawalRequested) ...[
+                                      const SizedBox(height: 10),
+                                      _buildWithdrawalBadge(u),
                                     ],
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(u.email, style: TextStyle(color: Colors.grey[500], fontSize: 13)),
-                                ],
-                              ),
-                              if (u.withdrawalRequested)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                  decoration: BoxDecoration(
-                                    color: Colors.orange.shade50,
-                                    borderRadius: BorderRadius.circular(20),
-                                    border: Border.all(color: Colors.orange.shade200),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      const Icon(Icons.pending_actions, color: Colors.orange, size: 16),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        'Payout Requested: ₹${u.withdrawalRequestedAmount.toStringAsFixed(0)}',
-                                        style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.bold, fontSize: 12),
-                                      ),
-                                    ],
-                                  ),
+                                  ],
                                 ),
-                            ],
-                          ),
                           const Divider(height: 24, color: Color(0xFFE2E8F0)),
 
                           // User Details Grid / Row
@@ -293,14 +404,11 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                       child: Row(
                         children: [
                           if (item.product.images.isNotEmpty)
-                            ClipRRect(
+                            AppNetworkImage.thumbnail(
+                              imageUrl: item.product.images.first,
+                              size: 40,
+                              fit: BoxFit.cover,
                               borderRadius: BorderRadius.circular(4),
-                              child: Image.network(
-                                item.product.images.first,
-                                width: 40,
-                                height: 40,
-                                fit: BoxFit.cover,
-                              ),
                             )
                           else
                             Container(
@@ -322,17 +430,16 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF1E293B)),
                                 ),
                                 const SizedBox(height: 2),
-                                Row(
+                                Wrap(
+                                  spacing: 6,
+                                  runSpacing: 2,
+                                  crossAxisAlignment: WrapCrossAlignment.center,
                                   children: [
                                     Text('Qty: ${item.quantity}', style: const TextStyle(color: Colors.grey, fontSize: 11)),
-                                    if (item.variantSize != null && item.variantSize!.isNotEmpty) ...[
-                                      const SizedBox(width: 8),
+                                    if (item.variantSize != null && item.variantSize!.isNotEmpty)
                                       Text('| Size: ${item.variantSize}', style: const TextStyle(color: Colors.grey, fontSize: 11)),
-                                    ],
-                                    if (item.referrer != null && item.referrer!.isNotEmpty) ...[
-                                      const SizedBox(width: 8),
+                                    if (item.referrer != null && item.referrer!.isNotEmpty)
                                       Text('| Ref: ${item.referrer}', style: const TextStyle(color: Colors.orange, fontSize: 11, fontWeight: FontWeight.bold)),
-                                    ],
                                   ],
                                 ),
                               ],
@@ -381,6 +488,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                     runSpacing: 8,
                     children: wishlisted.map((p) {
                       return Container(
+                        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width - 60),
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(
                           color: Colors.red.shade50,
@@ -391,15 +499,20 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             if (p.images.isNotEmpty) ...[
-                              ClipRRect(
+                              AppNetworkImage.thumbnail(
+                                imageUrl: p.images.first,
+                                size: 18,
+                                fit: BoxFit.cover,
                                 borderRadius: BorderRadius.circular(2),
-                                child: Image.network(p.images.first, width: 18, height: 18, fit: BoxFit.cover),
                               ),
                               const SizedBox(width: 6),
                             ],
-                            Text(
-                              p.name,
-                              style: TextStyle(color: Colors.red.shade900, fontSize: 12, fontWeight: FontWeight.w500),
+                            Flexible(
+                              child: Text(
+                                p.name,
+                                style: TextStyle(color: Colors.red.shade900, fontSize: 12, fontWeight: FontWeight.w500),
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
                           ],
                         ),
@@ -431,14 +544,41 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
       children: [
         const Text('Earnings', style: TextStyle(color: Color(0xFF64748B), fontSize: 11, fontWeight: FontWeight.w600)),
         const SizedBox(height: 4),
-        Row(
+        Wrap(
+          spacing: 8,
+          runSpacing: 4,
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             Text('Balance: ₹${user.walletBalance.toStringAsFixed(0)}', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 14)),
-            const SizedBox(width: 8),
             Text('(Earned: ₹${user.totalEarned.toStringAsFixed(0)} | Paid: ₹${user.totalPaid.toStringAsFixed(0)})', style: const TextStyle(color: Colors.grey, fontSize: 11)),
           ],
         ),
       ],
+    );
+  }
+
+  Widget _buildWithdrawalBadge(UserModel u) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.orange.shade50,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.orange.shade200),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.pending_actions, color: Colors.orange, size: 16),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              'Payout Requested: ₹${u.withdrawalRequestedAmount.toStringAsFixed(0)}',
+              style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.bold, fontSize: 12),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
     );
   }
 

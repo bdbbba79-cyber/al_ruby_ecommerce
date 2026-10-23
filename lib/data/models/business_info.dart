@@ -45,6 +45,13 @@ class BusinessInfo {
   final double couponDiscountPercentage;
   final List<String> couponProductIds;
 
+  // Promo / Lifestyle Specials Banner
+  final String promoBannerTag;
+  final String promoBannerTitle;
+  final String promoBannerButtonText;
+  final String promoBannerTargetType; // 'all_products', 'category', 'product', 'url'
+  final String promoBannerTargetValue; // category name, productId, or route/url
+
   BusinessInfo({
     required this.companyName,
     required this.companyLogoUrl,
@@ -68,6 +75,11 @@ class BusinessInfo {
     this.couponCode = '',
     this.couponDiscountPercentage = 0.0,
     this.couponProductIds = const [],
+    this.promoBannerTag = 'LIFESTYLE SPECIALS',
+    this.promoBannerTitle = 'UP TO 40% OFF ON WATCHES, APPAREL & FOOTWEAR',
+    this.promoBannerButtonText = 'SHOP NOW',
+    this.promoBannerTargetType = 'all_products',
+    this.promoBannerTargetValue = '',
   });
 
   List<HomeBanner> get activeBanners {
@@ -77,12 +89,12 @@ class BusinessInfo {
 
   factory BusinessInfo.fromMap(Map<String, dynamic> map) {
     return BusinessInfo(
-      companyName: map['companyName'] ?? 'Al Ruby Perfumes',
+      companyName: map['companyName'] ?? 'IZZFAH NOOBI',
       companyLogoUrl: map['companyLogoUrl'] ?? '',
       address: map['address'] ?? 'Erumathadam Malappuram - 679338',
       mobileNumber: map['mobileNumber'] ?? '9400859846',
-      whatsappNumber: map['whatsappNumber'] ?? '9656978468',
-      email: map['email'] ?? 'info@alrubyperfumes.com',
+      whatsappNumber: map['whatsappNumber'] ?? '919656978468',
+      email: map['email'] ?? 'support@izzfahnoobi.com',
       upiId: map['upiId'] ?? 'ismuchelembra-0002@oksbi',
       facebookLink: map['facebookLink'] ?? '',
       instagramLink: map['instagramLink'] ?? '',
@@ -102,6 +114,11 @@ class BusinessInfo {
       couponCode: map['couponCode'] ?? '',
       couponDiscountPercentage: (map['couponDiscountPercentage'] as num?)?.toDouble() ?? 0.0,
       couponProductIds: List<String>.from(map['couponProductIds'] ?? []),
+      promoBannerTag: map['promoBannerTag'] ?? 'LIFESTYLE SPECIALS',
+      promoBannerTitle: map['promoBannerTitle'] ?? 'UP TO 40% OFF ON WATCHES, APPAREL & FOOTWEAR',
+      promoBannerButtonText: map['promoBannerButtonText'] ?? 'SHOP NOW',
+      promoBannerTargetType: map['promoBannerTargetType'] ?? 'all_products',
+      promoBannerTargetValue: map['promoBannerTargetValue'] ?? '',
     );
   }
 
@@ -129,6 +146,11 @@ class BusinessInfo {
       'couponCode': couponCode,
       'couponDiscountPercentage': couponDiscountPercentage,
       'couponProductIds': couponProductIds,
+      'promoBannerTag': promoBannerTag,
+      'promoBannerTitle': promoBannerTitle,
+      'promoBannerButtonText': promoBannerButtonText,
+      'promoBannerTargetType': promoBannerTargetType,
+      'promoBannerTargetValue': promoBannerTargetValue,
     };
   }
 
@@ -155,6 +177,11 @@ class BusinessInfo {
     String? couponCode,
     double? couponDiscountPercentage,
     List<String>? couponProductIds,
+    String? promoBannerTag,
+    String? promoBannerTitle,
+    String? promoBannerButtonText,
+    String? promoBannerTargetType,
+    String? promoBannerTargetValue,
   }) {
     return BusinessInfo(
       companyName: companyName ?? this.companyName,
@@ -179,6 +206,11 @@ class BusinessInfo {
       couponCode: couponCode ?? this.couponCode,
       couponDiscountPercentage: couponDiscountPercentage ?? this.couponDiscountPercentage,
       couponProductIds: couponProductIds ?? this.couponProductIds,
+      promoBannerTag: promoBannerTag ?? this.promoBannerTag,
+      promoBannerTitle: promoBannerTitle ?? this.promoBannerTitle,
+      promoBannerButtonText: promoBannerButtonText ?? this.promoBannerButtonText,
+      promoBannerTargetType: promoBannerTargetType ?? this.promoBannerTargetType,
+      promoBannerTargetValue: promoBannerTargetValue ?? this.promoBannerTargetValue,
     );
   }
 }

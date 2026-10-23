@@ -30,21 +30,10 @@ subprojects {
     project.evaluationDependsOn(":app")
 }
 
-fun Project.configureAndroid() {
-    if (plugins.hasPlugin("com.android.application") ||
-        plugins.hasPlugin("com.android.library")) {
+subprojects {
+    plugins.withId("com.android.library") {
         val android = extensions.findByName("android") as? BaseExtension
         android?.compileSdkVersion(36)
-    }
-}
-
-subprojects {
-    if (state.executed) {
-        configureAndroid()
-    } else {
-        afterEvaluate {
-            configureAndroid()
-        }
     }
 }
 

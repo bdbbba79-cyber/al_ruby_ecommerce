@@ -116,7 +116,7 @@ class _OfflineScreenState extends State<OfflineScreen> with SingleTickerProvider
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color(0xFF0D5F4D), Color(0xFF011E16)],
+            colors: [Color(0xFF1E60D5), Color(0xFF0F172A)],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
@@ -133,7 +133,7 @@ class _OfflineScreenState extends State<OfflineScreen> with SingleTickerProvider
                   height: 300,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: const Color(0xFFC6A473).withOpacity(0.05),
+                    color: Colors.white.withOpacity(0.05),
                   ),
                 ),
               ),
@@ -145,7 +145,7 @@ class _OfflineScreenState extends State<OfflineScreen> with SingleTickerProvider
                   height: 250,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: const Color(0xFF0D5F4D).withOpacity(0.1),
+                    color: const Color(0xFF3B82F6).withOpacity(0.1),
                   ),
                 ),
               ),
@@ -163,14 +163,14 @@ class _OfflineScreenState extends State<OfflineScreen> with SingleTickerProvider
                             padding: const EdgeInsets.all(24),
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: const Color(0xFF0D5F4D).withOpacity(0.3),
+                              color: const Color(0xFF1E3A8A).withOpacity(0.4),
                               border: Border.all(
-                                color: const Color(0xFFC6A473).withOpacity(0.2 + (_animController.value * 0.3)),
+                                color: const Color(0xFF60A5FA).withOpacity(0.2 + (_animController.value * 0.3)),
                                 width: 1.5,
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: const Color(0xFFC6A473).withOpacity(0.1 * _animController.value),
+                                  color: const Color(0xFF3B82F6).withOpacity(0.2 * _animController.value),
                                   blurRadius: 20,
                                   spreadRadius: 2,
                                 ),
@@ -182,7 +182,7 @@ class _OfflineScreenState extends State<OfflineScreen> with SingleTickerProvider
                         child: const Icon(
                           Icons.wifi_off_rounded,
                           size: 64,
-                          color: Color(0xFFC6A473),
+                          color: Color(0xFF93C5FD),
                         ),
                       ),
                       const SizedBox(height: 40),
@@ -212,8 +212,8 @@ class _OfflineScreenState extends State<OfflineScreen> with SingleTickerProvider
                         child: ElevatedButton(
                           onPressed: widget.onRetry,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFC6A473),
-                            foregroundColor: const Color(0xFF011E16),
+                            backgroundColor: const Color(0xFF1E60D5),
+                            foregroundColor: Colors.white,
                             elevation: 4,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(25),

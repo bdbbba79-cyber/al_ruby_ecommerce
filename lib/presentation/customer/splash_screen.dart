@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:al_ruby_ecommerce/presentation/providers/providers.dart';
+import 'package:al_ruby_ecommerce/presentation/widgets/app_network_image.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -68,24 +69,32 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     final businessInfoAsync = ref.watch(businessInfoProvider);
 
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.background,
+      backgroundColor: Colors.white,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             businessInfoAsync.when(
               data: (info) => info.companyLogoUrl.isNotEmpty
-                  ? Image.network(info.companyLogoUrl, height: 160, width: 160, fit: BoxFit.contain)
+                  ? AppNetworkImage(
+                      imageUrl: info.companyLogoUrl,
+                      height: 150,
+                      width: 150,
+                      cacheWidth: 300,
+                      cacheHeight: 300,
+                      fit: BoxFit.contain,
+                      fallbackAsset: 'assets/logo/logo.png',
+                    )
                   : _buildFallbackLogo(info.companyName),
-              loading: () => const CircularProgressIndicator(),
+              loading: () => _buildFallbackLogo(null),
               error: (_, __) => _buildFallbackLogo(null),
             ),
-            const SizedBox(height: 24),
-            SizedBox(
+            const SizedBox(height: 32),
+            const SizedBox(
               width: 140,
               child: LinearProgressIndicator(
-                color: Theme.of(context).colorScheme.primary,
-                backgroundColor: Theme.of(context).colorScheme.surface,
+                color: Color(0xFF1E60D5),
+                backgroundColor: Color(0xFFEFF6FF),
               ),
             ),
           ],
@@ -95,36 +104,13 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   }
 
   Widget _buildFallbackLogo(String? name) {
-    return Column(
-      children: [
-        Container(
-          height: 100,
-          width: 100,
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primary,
-            borderRadius: BorderRadius.circular(20),
-          ),
-          alignment: Alignment.center,
-          child: const Text(
-            'AR',
-            style: TextStyle(
-              color: Color(0xFF011E16),
-              fontSize: 40,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
-        Text(
-          name ?? 'Al Ruby Perfumes',
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 1,
-          ),
-        ),
-      ],
+    return Image.asset(
+      'assets/logo/logo.png',
+      height: 150,
+      width: 150,
+      cacheWidth: 300,
+      cacheHeight: 300,
+      fit: BoxFit.contain,
     );
   }
 }

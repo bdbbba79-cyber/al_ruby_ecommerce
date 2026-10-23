@@ -31,8 +31,8 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> with Sing
   }
 
   Future<void> _generateAndPrintInvoice(OrderModel order) async {
-    final businessInfo = ref.read(businessInfoProvider).value;
-    final companyName = businessInfo?.companyName ?? 'Al Ruby Perfumes';
+    final businessInfo = ref.read(businessInfoProvider).valueOrNull;
+    final companyName = businessInfo?.companyName ?? 'IZZFAH NOOBI';
     final address = businessInfo?.address ?? 'Erumathadam Malappuram';
     final mobileNumber = businessInfo?.mobileNumber ?? '9400859846';
 
@@ -172,7 +172,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> with Sing
 
                 // Footer Info
                 pw.Center(
-                  child: pw.Text('Thank you for shopping with Al Ruby Perfumes!', style: pw.TextStyle(fontStyle: pw.FontStyle.italic, fontSize: 12)),
+                  child: pw.Text('Thank you for shopping with IZZFAH NOOBI!', style: pw.TextStyle(fontStyle: pw.FontStyle.italic, fontSize: 12)),
                 ),
               ],
             ),
@@ -185,15 +185,97 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> with Sing
   }
 
   Future<void> _verifyUPIPayment(OrderModel order) async {
-    final confirm = await showDialog<bool>(
+    final confirm = await AdminLayout.showAdminDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Confirm Payment'),
-        content: Text('Are you sure you want to verify UPI Payment with UTR/Ref ID: ${order.transactionId}?\nThis will mark the payment as PAID and confirm the order.'),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade50,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.verified_outlined, color: Colors.orange, size: 22),
+            ),
+            const SizedBox(width: 12),
+            const Text('Confirm UPI Payment'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Please verify that the payment has been credited to your bank/merchant UPI account before confirming.',
+              style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Amount:', style: TextStyle(color: Color(0xFF64748B), fontSize: 13)),
+                      Text(
+                        '₹${order.grandTotal.toStringAsFixed(0)}',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0F62FE)),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Customer:', style: TextStyle(color: Color(0xFF64748B), fontSize: 13)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          order.customerName,
+                          textAlign: TextAlign.end,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('UTR / Ref ID:', style: TextStyle(color: Color(0xFF64748B), fontSize: 13)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          order.transactionId ?? 'N/A',
+                          textAlign: TextAlign.end,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.orange),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          OutlinedButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0F62FE)),
             child: const Text('Verify & Confirm'),
           ),
         ],
@@ -204,7 +286,6 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> with Sing
       await ref.read(orderRepoProvider).updatePaymentStatus(order.id, 'Paid');
       await ref.read(orderRepoProvider).updateOrderStatus(order.id, OrderStatus.confirmed);
       
-      // Trigger notification placeholder
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Payment verified and order confirmed successfully.')));
       }
@@ -220,16 +301,25 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> with Sing
       title: 'Orders Management',
       child: Column(
         children: [
-          TabBar(
-            controller: _tabController,
-            tabs: const [
-              Tab(text: 'All Orders'),
-              Tab(text: 'UPI Verification Pending'),
-              Tab(text: 'Completed / Shipped'),
-            ],
-            labelColor: const Color(0xFF0F62FE),
-            unselectedLabelColor: const Color(0xFF64748B),
-            indicatorColor: const Color(0xFF0F62FE),
+          Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0), width: 1)),
+            ),
+            child: TabBar(
+              controller: _tabController,
+              isScrollable: true,
+              tabAlignment: TabAlignment.start,
+              tabs: const [
+                Tab(text: 'All Orders'),
+                Tab(text: 'UPI Verification Pending'),
+                Tab(text: 'Completed / Shipped'),
+              ],
+              labelColor: const Color(0xFF0F62FE),
+              unselectedLabelColor: const Color(0xFF64748B),
+              indicatorColor: const Color(0xFF0F62FE),
+              indicatorWeight: 3,
+            ),
           ),
           Expanded(
             child: ordersAsync.when(
@@ -244,7 +334,34 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> with Sing
                 );
               },
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, _) => Center(child: Text('Failed to load orders: $err')),
+              error: (err, _) => Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.lock_clock_outlined, size: 56, color: Color(0xFFDC2626)),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Firestore Permission Required',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'The orders collection is protected by Cloud Firestore rules.\nPlease publish the project Firestore Security Rules in the Firebase Console to unlock full order management.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Color(0xFF64748B), fontSize: 13),
+                      ),
+                      const SizedBox(height: 20),
+                      ElevatedButton.icon(
+                        onPressed: () => ref.refresh(adminOrdersProvider),
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Retry Loading Orders'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
           )
         ],
@@ -257,18 +374,20 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> with Sing
       return const Center(child: Text('No orders found matching this filter.'));
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(24.0),
-      itemCount: orders.length,
-      itemBuilder: (context, index) {
-        final order = orders[index];
-        final dateStr = DateFormat('dd MMM yyyy, hh:mm a').format(order.createdAt);
-        final isDesktop = MediaQuery.of(context).size.width > 900;
-        
-        return Card(
-          margin: const EdgeInsets.only(bottom: 20.0),
-          child: Padding(
-            padding: const EdgeInsets.all(20.0),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isDesktop = constraints.maxWidth > 800;
+        return ListView.builder(
+          padding: EdgeInsets.all(isDesktop ? 24.0 : 12.0),
+          itemCount: orders.length,
+          itemBuilder: (context, index) {
+            final order = orders[index];
+            final dateStr = DateFormat('dd MMM yyyy, hh:mm a').format(order.createdAt);
+            
+            return Card(
+              margin: const EdgeInsets.only(bottom: 16.0),
+              child: Padding(
+                padding: EdgeInsets.all(isDesktop ? 20.0 : 14.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -310,7 +429,7 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> with Sing
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               // Status Badge
-                              _buildStatusDropdown(order),
+                              Flexible(child: _buildStatusDropdown(order)),
                               IconButton(
                                 icon: const Icon(Icons.print_outlined, color: Colors.blue),
                                 onPressed: () => _generateAndPrintInvoice(order),
@@ -441,9 +560,17 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> with Sing
                     return Padding(
                       padding: const EdgeInsets.symmetric(vertical: 4.0),
                       child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('${item.productName}  (x${item.quantity})', style: const TextStyle(color: Color(0xFF475569))),
-                          const Spacer(),
+                          Expanded(
+                            child: Text(
+                              '${item.productName}  (x${item.quantity})',
+                              style: const TextStyle(color: Color(0xFF475569)),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 2,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
                           Text('₹${(item.price * item.quantity).toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold)),
                         ],
                       ),
@@ -464,6 +591,8 @@ class _AdminOrdersScreenState extends ConsumerState<AdminOrdersScreen> with Sing
             ),
           ),
         );
+      },
+    );
       },
     );
   }

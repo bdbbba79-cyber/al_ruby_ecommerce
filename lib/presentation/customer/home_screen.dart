@@ -2,12 +2,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:al_ruby_ecommerce/core/utils/url_launcher_utils.dart';
 import 'package:al_ruby_ecommerce/presentation/providers/providers.dart';
 import 'package:al_ruby_ecommerce/data/models/product.dart';
 import 'package:al_ruby_ecommerce/data/models/category.dart';
 import 'package:al_ruby_ecommerce/data/models/business_info.dart';
 import 'package:al_ruby_ecommerce/presentation/customer/customer_layout.dart';
+import 'package:al_ruby_ecommerce/presentation/widgets/app_network_image.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   final bool isEmbedded;
@@ -114,7 +115,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
-                              color: Colors.white,
+                              color: Color(0xFF0F172A),
                               letterSpacing: 1.2,
                             ),
                           ),
@@ -124,8 +125,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             },
                             child: const Row(
                               children: [
-                                Text('View All', style: TextStyle(color: Color(0xFFC6A473))),
-                                Icon(Icons.chevron_right, size: 16, color: Color(0xFFC6A473)),
+                                Text('View All', style: TextStyle(color: Color(0xFF1E60D5), fontWeight: FontWeight.bold)),
+                                Icon(Icons.chevron_right, size: 16, color: Color(0xFF1E60D5)),
                               ],
                             ),
                           ),
@@ -142,8 +143,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
                       const SizedBox(height: 40),
 
-                      // Combo Offers Banner
-                      _buildComboBanner(context),
+                      // Promo / Lifestyle Specials Banner
+                      _buildComboBanner(context, businessInfoAsync.valueOrNull),
 
                       const SizedBox(height: 60),
                     ],
@@ -165,11 +166,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   PreferredSizeWidget _buildMobileAppBar(BuildContext context, int cartCount) {
-    final businessInfo = ref.watch(businessInfoProvider).value;
-    final companyName = businessInfo?.companyName ?? 'AL RUBY PERFUMES';
+    final businessInfo = ref.watch(businessInfoProvider).valueOrNull;
+    final companyName = businessInfo?.companyName ?? 'IZZFAH NOOBI';
     final logoUrl = businessInfo?.companyLogoUrl;
 
     return AppBar(
+      backgroundColor: const Color(0xFF1E60D5),
+      elevation: 0.5,
       leading: Builder(
         builder: (context) => IconButton(
           icon: const Icon(Icons.menu, color: Colors.white),
@@ -180,16 +183,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (logoUrl != null && logoUrl.isNotEmpty)
-            Image.network(
-              logoUrl,
-              height: 24,
-              width: 24,
-              fit: BoxFit.contain,
-              errorBuilder: (_, __, ___) => Image.asset('assets/logo/favicon.png', height: 24, width: 24),
-            )
-          else
-            Image.asset('assets/logo/favicon.png', height: 24, width: 24),
+          Container(
+            padding: const EdgeInsets.all(3),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: (logoUrl != null && logoUrl.isNotEmpty)
+                ? AppNetworkImage(
+                    imageUrl: logoUrl,
+                    height: 26,
+                    width: 26,
+                    cacheWidth: 80,
+                    cacheHeight: 80,
+                    fit: BoxFit.contain,
+                    fallbackAsset: 'assets/logo/logo.png',
+                  )
+                : Image.asset('assets/logo/logo.png', height: 26, width: 26, cacheWidth: 80, cacheHeight: 80, fit: BoxFit.contain),
+          ),
           const SizedBox(width: 8),
           Text(
             companyName.toUpperCase(),
@@ -217,14 +228,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 top: 6,
                 child: Container(
                   padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primary,
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
                     shape: BoxShape.circle,
                   ),
                   constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
                   child: Text(
                     '$cartCount',
-                    style: const TextStyle(color: Color(0xFF011E16), fontSize: 10, fontWeight: FontWeight.bold),
+                    style: const TextStyle(color: Color(0xFF1E60D5), fontSize: 10, fontWeight: FontWeight.bold),
                     textAlign: TextAlign.center,
                   ),
                 ),
@@ -239,33 +250,40 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   // --- Mobile Drawer ---
   Widget _buildMobileDrawer(BuildContext context, userDetails) {
     final businessInfoAsync = ref.watch(businessInfoProvider);
-    final businessInfo = businessInfoAsync.value;
-    final companyName = businessInfo?.companyName ?? 'AL RUBY PERFUMES';
+    final businessInfo = businessInfoAsync.valueOrNull;
+    final companyName = businessInfo?.companyName ?? 'IZZFAH NOOBI';
     final logoUrl = businessInfo?.companyLogoUrl;
 
     return Drawer(
-      backgroundColor: Theme.of(context).colorScheme.background,
+      backgroundColor: Colors.white,
       child: Column(
         children: [
           DrawerHeader(
             decoration: const BoxDecoration(
-              color: Color(0xFF022B20),
-              border: Border(bottom: BorderSide(color: Color(0xFF05372B), width: 1.5)),
+              color: Color(0xFF1E60D5),
             ),
             child: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  if (logoUrl != null && logoUrl.isNotEmpty)
-                    Image.network(
-                      logoUrl,
-                      height: 48,
-                      width: 48,
-                      fit: BoxFit.contain,
-                      errorBuilder: (_, __, ___) => Image.asset('assets/logo/favicon.png', height: 48, width: 48),
-                    )
-                  else
-                    Image.asset('assets/logo/favicon.png', height: 48, width: 48),
+                  Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: (logoUrl != null && logoUrl.isNotEmpty)
+                        ? AppNetworkImage(
+                            imageUrl: logoUrl,
+                            height: 52,
+                            width: 52,
+                            cacheWidth: 104,
+                            cacheHeight: 104,
+                            fit: BoxFit.contain,
+                            fallbackAsset: 'assets/logo/logo.png',
+                          )
+                        : Image.asset('assets/logo/logo.png', height: 52, width: 52, cacheWidth: 104, cacheHeight: 104, fit: BoxFit.contain),
+                  ),
                   const SizedBox(height: 12),
                   Text(
                     companyName.toUpperCase(),
@@ -276,66 +294,61 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
           ),
           ListTile(
-            leading: const Icon(Icons.home_outlined, color: Colors.white),
-            title: const Text('Home', style: TextStyle(color: Colors.white)),
+            leading: const Icon(Icons.home_outlined, color: Color(0xFF1E60D5)),
+            title: const Text('Home', style: TextStyle(color: Color(0xFF0F172A), fontWeight: FontWeight.w500)),
             onTap: () {
               context.pop();
               ref.read(customerTabIndexProvider.notifier).state = 0;
             },
           ),
           ListTile(
-            leading: const Icon(Icons.grid_view_outlined, color: Colors.white),
-            title: const Text('Products', style: TextStyle(color: Colors.white)),
+            leading: const Icon(Icons.grid_view_outlined, color: Color(0xFF1E60D5)),
+            title: const Text('Products', style: TextStyle(color: Color(0xFF0F172A), fontWeight: FontWeight.w500)),
             onTap: () {
               context.pop();
               ref.read(customerTabIndexProvider.notifier).state = 1;
             },
           ),
           ListTile(
-            leading: const Icon(Icons.favorite_border, color: Colors.white),
-            title: const Text('Wishlist', style: TextStyle(color: Colors.white)),
+            leading: const Icon(Icons.favorite_border, color: Color(0xFF1E60D5)),
+            title: const Text('Wishlist', style: TextStyle(color: Color(0xFF0F172A), fontWeight: FontWeight.w500)),
             onTap: () {
               context.pop();
               ref.read(customerTabIndexProvider.notifier).state = 2;
             },
           ),
           ListTile(
-            leading: const Icon(Icons.receipt_long_outlined, color: Colors.white),
-            title: const Text('My Orders', style: TextStyle(color: Colors.white)),
+            leading: const Icon(Icons.receipt_long_outlined, color: Color(0xFF1E60D5)),
+            title: const Text('My Orders', style: TextStyle(color: Color(0xFF0F172A), fontWeight: FontWeight.w500)),
             onTap: () {
               context.pop();
               ref.read(customerTabIndexProvider.notifier).state = 3;
             },
           ),
           ListTile(
-            leading: const Icon(Icons.person_outline, color: Colors.white),
-            title: const Text('My Account', style: TextStyle(color: Colors.white)),
+            leading: const Icon(Icons.person_outline, color: Color(0xFF1E60D5)),
+            title: const Text('My Account', style: TextStyle(color: Color(0xFF0F172A), fontWeight: FontWeight.w500)),
             onTap: () {
               context.pop();
               ref.read(customerTabIndexProvider.notifier).state = 4;
             },
           ),
-          const Divider(color: Color(0xFF05372B)),
+          const Divider(color: Color(0xFFE2E8F0)),
           businessInfoAsync.when(
             data: (info) => ListTile(
               leading: const Icon(Icons.chat_bubble_outline, color: Color(0xFF25D366)),
               title: const Text('WhatsApp Support', style: TextStyle(color: Color(0xFF25D366))),
               onTap: () {
                 context.pop();
-                _launchURL('https://wa.me/${info.whatsappNumber}');
+                launchWhatsApp(
+                  context: context,
+                  phone: info.whatsappNumber,
+                  message: 'Hello Izzfah Noobi, I need support.',
+                );
               },
             ),
             loading: () => const SizedBox(),
             error: (_, __) => const SizedBox(),
-          ),
-          const Divider(color: Color(0xFF05372B)),
-          ListTile(
-            leading: const Icon(Icons.admin_panel_settings_outlined, color: Colors.orangeAccent),
-            title: const Text('Admin Panel (Temp)', style: TextStyle(color: Colors.orangeAccent)),
-            onTap: () {
-              context.pop();
-              context.go('/admin');
-            },
           ),
         ],
       ),
@@ -358,12 +371,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         horizontal: height > 240 ? 24.0 : 16.0,
       ),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+        color: const Color(0xFF1E40AF),
         gradient: const LinearGradient(
-          colors: [Color(0xFF011E16), Color(0xFF05372B)],
+          colors: [Color(0xFF1E3A8A), Color(0xFF2563EB)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Center(
         child: Row(
@@ -374,20 +388,31 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    'Feel the\nLuxury in\nEvery Spray',
+                    'Upgrade Your\nLifestyle &\nDaily Fashion',
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: height > 240 ? 32 : 18,
+                      fontSize: height > 240 ? 30 : 17,
                       fontWeight: FontWeight.bold,
                       height: 1.2,
                     ),
                   ),
-                  SizedBox(height: height > 240 ? 16 : 8),
+                  SizedBox(height: height > 240 ? 8 : 4),
+                  Text(
+                    'Watches • Shirts • Shoes • Bags • Jerseys',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.9),
+                      fontSize: height > 240 ? 13 : 10,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  SizedBox(height: height > 240 ? 14 : 8),
                   ElevatedButton(
                     onPressed: () {
                       ref.read(customerTabIndexProvider.notifier).state = 1; // Swap to Products tab
                     },
                     style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: const Color(0xFF1E60D5),
                       padding: EdgeInsets.symmetric(
                         horizontal: height > 240 ? 20 : 12,
                         vertical: height > 240 ? 12 : 6,
@@ -395,26 +420,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ),
                     child: Text(
                       'SHOP NOW',
-                      style: TextStyle(fontSize: height > 240 ? 14 : 10),
+                      style: TextStyle(fontSize: height > 240 ? 14 : 10, fontWeight: FontWeight.bold),
                     ),
                   ),
                 ],
               ),
             ),
             const SizedBox(width: 16),
-            // Premium Gold Perfume Bottle Graphic Placeholder
+            // Lifestyle Fashion Graphic Placeholder
             Container(
               height: height * 0.7,
               width: height * 0.5,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.03),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Theme.of(context).colorScheme.primary.withOpacity(0.2)),
+                color: Colors.white.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.white.withOpacity(0.25)),
               ),
               child: Icon(
-                Icons.local_florist,
-                color: Theme.of(context).colorScheme.primary,
-                size: height * 0.3,
+                Icons.checkroom_rounded,
+                color: Colors.white,
+                size: height * 0.35,
               ),
             ),
           ],
@@ -432,7 +457,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ref.read(customerTabIndexProvider.notifier).state = 1; // Jump to products
       },
       decoration: const InputDecoration(
-        hintText: 'Search perfumes...',
+        hintText: 'Search watches, shirts, pants, shoes, bags, jerseys...',
         prefixIcon: Icon(Icons.search),
       ),
     );
@@ -444,43 +469,61 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       data: (categories) {
         if (categories.isEmpty) return const SizedBox();
         return SizedBox(
-          height: 110,
+          height: 135,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             itemCount: categories.length,
             itemBuilder: (context, index) {
               final cat = categories[index];
               return Padding(
-                padding: const EdgeInsets.only(right: 20.0),
+                padding: const EdgeInsets.only(right: 16.0),
                 child: InkWell(
+                  borderRadius: BorderRadius.circular(12),
                   onTap: () {
-                    // Set category filter and jump to Products view
-                    // We can either set category or let the products tab load it
+                    ref.read(selectedCategoryFilterProvider.notifier).state = cat.name;
                     ref.read(customerTabIndexProvider.notifier).state = 1;
                   },
-                  child: Column(
-                    children: [
-                      Container(
-                        height: 70,
-                        width: 70,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Theme.of(context).colorScheme.primary, width: 1.5),
-                          color: Theme.of(context).colorScheme.surface,
+                  child: SizedBox(
+                    width: 80,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Container(
+                          height: 70,
+                          width: 70,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(color: const Color(0xFF1E60D5), width: 1.5),
+                            color: const Color(0xFFEFF6FF),
+                          ),
+                          padding: const EdgeInsets.all(4),
+                          child: ClipOval(
+                            child: cat.imageUrl.isNotEmpty
+                                ? AppNetworkImage.thumbnail(
+                                    imageUrl: cat.imageUrl,
+                                    size: 70,
+                                    fit: BoxFit.cover,
+                                    errorWidget: const Icon(Icons.category_outlined, color: Color(0xFF1E60D5)),
+                                  )
+                                : const Icon(Icons.category_outlined, color: Color(0xFF1E60D5)),
+                          ),
                         ),
-                        padding: const EdgeInsets.all(4),
-                        child: ClipOval(
-                          child: cat.imageUrl.isNotEmpty
-                              ? Image.network(cat.imageUrl, fit: BoxFit.cover)
-                              : const Icon(Icons.folder_open, color: Colors.white),
+                        const SizedBox(height: 6),
+                        Text(
+                          cat.name,
+                          textAlign: TextAlign.center,
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF0F172A),
+                            height: 1.25,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        cat.name,
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               );
@@ -488,7 +531,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
         );
       },
-      loading: () => const SizedBox(height: 110),
+      loading: () => const SizedBox(height: 135),
       error: (_, __) => const SizedBox(),
     );
   }
@@ -541,8 +584,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   child: Stack(
                     children: [
                       if (product.images.isNotEmpty)
-                        Image.network(
-                          product.images.first,
+                        AppNetworkImage.card(
+                          imageUrl: product.images.first,
                           fit: BoxFit.cover,
                           width: double.infinity,
                           height: double.infinity,
@@ -592,13 +635,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     children: [
                       Text(
                         product.name,
-                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white),
+                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                       Text(
                         '₹${product.sellingPrice.toStringAsFixed(0)}',
-                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFFC6A473)),
+                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF1E60D5)),
                       ),
                     ],
                   ),
@@ -611,48 +654,97 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  // --- Combo Banner Section ---
-  Widget _buildComboBanner(BuildContext context) {
+  // --- Promo Banner Section ---
+  Widget _buildComboBanner(BuildContext context, BusinessInfo? info) {
+    final tagText = (info?.promoBannerTag != null && info!.promoBannerTag.trim().isNotEmpty)
+        ? info.promoBannerTag
+        : 'LIFESTYLE SPECIALS';
+    final titleText = (info?.promoBannerTitle != null && info!.promoBannerTitle.trim().isNotEmpty)
+        ? info.promoBannerTitle
+        : 'UP TO 40% OFF ON WATCHES, APPAREL & FOOTWEAR';
+    final buttonText = (info?.promoBannerButtonText != null && info!.promoBannerButtonText.trim().isNotEmpty)
+        ? info.promoBannerButtonText
+        : 'SHOP NOW';
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+        color: const Color(0xFFEFF6FF),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF05372B), width: 1.5),
+        border: Border.all(color: const Color(0xFFBFDBFE), width: 1.5),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text(
-            'COMBO OFFERS',
-            style: TextStyle(color: Color(0xFFC6A473), fontWeight: FontWeight.bold, fontSize: 14, letterSpacing: 1),
+          Text(
+            tagText.toUpperCase(),
+            style: const TextStyle(color: Color(0xFF1E60D5), fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 1),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'UP TO 20% OFF ON OUDH SETS',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+          Text(
+            titleText,
+            style: const TextStyle(color: Color(0xFF0F172A), fontWeight: FontWeight.bold, fontSize: 18),
           ),
           const SizedBox(height: 16),
           ElevatedButton(
-            onPressed: () {
-              ref.read(customerTabIndexProvider.notifier).state = 1; // Jump to products
-            },
-            child: const Text('SHOP NOW'),
+            onPressed: () => _handlePromoBannerNavigation(context, info),
+            child: Text(buttonText.toUpperCase()),
           ),
         ],
       ),
     );
   }
 
+  void _handlePromoBannerNavigation(BuildContext context, BusinessInfo? info) {
+    if (info == null) {
+      ref.read(selectedCategoryFilterProvider.notifier).state = null;
+      ref.read(customerTabIndexProvider.notifier).state = 1;
+      return;
+    }
+
+    final targetType = info.promoBannerTargetType;
+    final targetValue = info.promoBannerTargetValue.trim();
+
+    switch (targetType) {
+      case 'category':
+        ref.read(selectedCategoryFilterProvider.notifier).state = targetValue.isNotEmpty ? targetValue : null;
+        ref.read(customerTabIndexProvider.notifier).state = 1;
+        break;
+      case 'product':
+        if (targetValue.isNotEmpty) {
+          context.push('/product/$targetValue');
+        } else {
+          ref.read(selectedCategoryFilterProvider.notifier).state = null;
+          ref.read(customerTabIndexProvider.notifier).state = 1;
+        }
+        break;
+      case 'url':
+        if (targetValue.startsWith('http://') || targetValue.startsWith('https://')) {
+          _launchURL(targetValue);
+        } else if (targetValue.isNotEmpty) {
+          context.push(targetValue.startsWith('/') ? targetValue : '/$targetValue');
+        } else {
+          ref.read(selectedCategoryFilterProvider.notifier).state = null;
+          ref.read(customerTabIndexProvider.notifier).state = 1;
+        }
+        break;
+      case 'all_products':
+      default:
+        ref.read(selectedCategoryFilterProvider.notifier).state = null;
+        ref.read(customerTabIndexProvider.notifier).state = 1;
+        break;
+    }
+  }
+
   // --- Footer ---
   Widget _buildFooter(BusinessInfo? info) {
-    final name = info?.companyName ?? 'Al Ruby Perfumes';
+    final name = info?.companyName ?? 'IZZFAH NOOBI';
     final address = info?.address ?? 'Erumathadam Malappuram - 679338';
-    final email = info?.email ?? 'info@alrubyperfumes.com';
+    final email = info?.email ?? 'support@izzfahnoobi.com';
     final mobile = info?.mobileNumber ?? '9400859846';
 
     return Container(
-      color: const Color(0xFF01140E),
+      color: const Color(0xFF0F172A),
       padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -675,9 +767,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.facebook, color: Color(0xFFC6A473), size: 20),
+                          const Icon(Icons.facebook, color: Color(0xFF1E60D5), size: 20),
                           const SizedBox(width: 6),
-                          Text('Facebook', style: TextStyle(color: Colors.grey[400], fontSize: 13)),
+                          Text('Facebook', style: TextStyle(color: Colors.grey[600], fontSize: 13)),
                         ],
                       ),
                     ),
@@ -690,9 +782,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.camera_alt, color: Color(0xFFC6A473), size: 20),
+                          const Icon(Icons.camera_alt, color: Color(0xFF1E60D5), size: 20),
                           const SizedBox(width: 6),
-                          Text('Instagram', style: TextStyle(color: Colors.grey[400], fontSize: 13)),
+                          Text('Instagram', style: TextStyle(color: Colors.grey[600], fontSize: 13)),
                         ],
                       ),
                     ),
@@ -700,7 +792,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ],
             ),
           ],
-          const Divider(color: Color(0xFF05372B), height: 40),
+          const Divider(color: Color(0xFFE2E8F0), height: 40),
           Center(
             child: Text(
               '© ${DateTime.now().year} $name. All rights reserved.',
@@ -713,10 +805,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Future<void> _launchURL(String url) async {
-    final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
-    }
+    await openExternalUrl(url, context: context);
   }
 }
 
@@ -777,12 +866,12 @@ class _AutoScrollingBannerState extends State<AutoScrollingBanner> {
               : null,
           child: Container(
             color: const Color(0xFF01140E),
-            child: Image.network(
-              banner.imageUrl,
+            child: AppNetworkImage.banner(
+              imageUrl: banner.imageUrl,
               fit: BoxFit.cover,
               width: double.infinity,
               height: double.infinity,
-              errorBuilder: (_, __, ___) => const Center(
+              errorWidget: const Center(
                 child: Icon(Icons.broken_image, color: Colors.white30, size: 40),
               ),
             ),

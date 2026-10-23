@@ -1,1 +1,43 @@
-{"hosting":{"public":"build/web","ignore":["firebase.json","**/.*","**/node_modules/**"],"rewrites":[{"source":"**","destination":"/index.html"}]},"flutter":{"platforms":{"android":{"default":{"projectId":"alrubyback","appId":"1:850326169710:android:a50b751bef999fbb8dde7f","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"alrubyback","configurations":{"android":"1:850326169710:android:a50b751bef999fbb8dde7f","ios":"1:850326169710:ios:74930aef1ad8102d8dde7f","web":"1:850326169710:web:cdb43bff428e65478dde7f"}}}}}}
+{
+  "hosting": {
+    "public": "build/web",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  },
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "storage": {
+    "rules": "storage.rules"
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "webcart-store-945ab",
+          "appId": "1:1092018996574:android:ae19fc2db5056dfb56bbcf",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "webcart-store-945ab",
+          "configurations": {
+            "android": "1:1092018996574:android:ae19fc2db5056dfb56bbcf",
+            "ios": "1:1092018996574:ios:ae19fc2db5056dfb56bbcf",
+            "web": "1:1092018996574:web:ae19fc2db5056dfb56bbcf"
+          }
+        }
+      }
+    }
+  }
+}

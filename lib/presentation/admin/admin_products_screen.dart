@@ -2,10 +2,11 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:uuid/uuid.dart';
 import 'package:al_ruby_ecommerce/presentation/admin/admin_layout.dart';
 import 'package:al_ruby_ecommerce/presentation/providers/providers.dart';
 import 'package:al_ruby_ecommerce/data/models/product.dart';
+import 'package:al_ruby_ecommerce/core/theme/theme.dart';
+import 'package:al_ruby_ecommerce/presentation/widgets/app_network_image.dart';
 
 class AdminProductsScreen extends ConsumerStatefulWidget {
   const AdminProductsScreen({super.key});
@@ -15,10 +16,8 @@ class AdminProductsScreen extends ConsumerStatefulWidget {
 }
 
 class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
-  final _uuid = const Uuid();
-
   void _showProductDialog([Product? product]) {
-    showDialog(
+    AdminLayout.showAdminDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => ProductFormDialog(product: product),
@@ -26,7 +25,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
   }
 
   Future<void> _deleteProduct(Product product) async {
-    final confirm = await showDialog<bool>(
+    final confirm = await AdminLayout.showAdminDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Product'),
@@ -68,7 +67,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
       selectedIndex: 1,
       title: 'Products Management',
       child: Padding(
-        padding: const EdgeInsets.all(24.0),
+        padding: EdgeInsets.all(isHeaderDesktop ? 24.0 : 12.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -154,7 +153,7 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
                       ),
                       clipBehavior: Clip.antiAlias,
                       child: p.images.isNotEmpty
-                          ? Image.network(p.images.first, fit: BoxFit.cover)
+                          ? AppNetworkImage.thumbnail(imageUrl: p.images.first, size: 50, fit: BoxFit.cover)
                           : const Icon(Icons.image_outlined),
                     ),
                   ),
@@ -232,13 +231,24 @@ class _AdminProductsScreenState extends ConsumerState<AdminProductsScreen> {
           margin: const EdgeInsets.only(bottom: 12.0),
           child: ListTile(
             leading: p.images.isNotEmpty
-                ? ClipRRect(
+                ? AppNetworkImage.thumbnail(
+                    imageUrl: p.images.first,
+                    size: 50,
+                    fit: BoxFit.cover,
                     borderRadius: BorderRadius.circular(4),
-                    child: Image.network(p.images.first, height: 50, width: 50, fit: BoxFit.cover),
                   )
                 : const Icon(Icons.image_outlined),
-            title: Text(p.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: Text('SKU: ${p.sku} • Stock: ${p.stock} • ₹${p.sellingPrice.toStringAsFixed(0)}'),
+            title: Text(
+              p.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            subtitle: Text(
+              'SKU: ${p.sku} • Stock: ${p.stock} • ₹${p.sellingPrice.toStringAsFixed(0)}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -293,6 +303,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
   final _imageUrlController = TextEditingController();
 
   bool _isSaving = false;
+  String _uploadStatus = '';
 
   @override
   void initState() {
@@ -338,20 +349,35 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
   }
 
   Future<void> _pickImages() async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.image,
-      allowMultiple: true,
-    );
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.image,
+        allowMultiple: true,
+        withData: true,
+      );
 
-    if (result != null) {
-      for (final file in result.files) {
-        if (file.bytes != null) {
-          setState(() {
-            _newImageBytes.add(file.bytes!);
-            _newImageNames.add(file.name);
-          });
+      if (result != null && result.files.isNotEmpty) {
+        int addedCount = 0;
+        for (final file in result.files) {
+          if (file.bytes != null) {
+            setState(() {
+              _newImageBytes.add(file.bytes!);
+              _newImageNames.add(file.name);
+            });
+            addedCount++;
+          }
+        }
+        if (addedCount > 0 && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('$addedCount photo(s) selected.')),
+          );
         }
       }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to select photos: $e')),
+      );
     }
   }
 
@@ -400,8 +426,24 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
       return;
     }
 
+    if (_newImageBytes.isNotEmpty) {
+      final authUser = ref.read(authRepoProvider).currentUser;
+      if (authUser == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Authentication required: Please log in to upload product images.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+    }
+
     setState(() {
       _isSaving = true;
+      _uploadStatus = _newImageBytes.isNotEmpty
+          ? 'Uploading photo 1 of ${_newImageBytes.length}...'
+          : 'Saving product...';
     });
 
     try {
@@ -410,9 +452,21 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
 
       // Upload new images
       for (int i = 0; i < _newImageBytes.length; i++) {
-        final path = 'products/${DateTime.now().millisecondsSinceEpoch}_${_newImageNames[i]}';
+        if (mounted) {
+          setState(() {
+            _uploadStatus = 'Uploading photo ${i + 1} of ${_newImageBytes.length}...';
+          });
+        }
+        final sanitizedName = _newImageNames[i].replaceAll(RegExp(r'[^a-zA-Z0-9._-]'), '_');
+        final path = 'products/${DateTime.now().millisecondsSinceEpoch}_$sanitizedName';
         final url = await storeRepo.uploadImage(_newImageBytes[i], path);
         uploadedUrls.add(url);
+      }
+
+      if (mounted) {
+        setState(() {
+          _uploadStatus = 'Saving product details...';
+        });
       }
 
       double mrp = 0.0;
@@ -459,7 +513,17 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Product saved successfully.')));
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error saving: $e')));
+      String msg = 'Error saving: $e';
+      if (e.toString().contains('unauthorized')) {
+        msg = 'Upload failed: User not authorized in Firebase Storage. Please publish storage rules in Firebase Console.';
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(msg),
+          backgroundColor: Colors.red.shade800,
+          duration: const Duration(seconds: 5),
+        ),
+      );
     } finally {
       if (mounted) {
         setState(() {
@@ -469,386 +533,675 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
     }
   }
 
+  Widget _buildSectionCard({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Widget child,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFF6FF),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, color: const Color(0xFF0F62FE), size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF0F172A),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF64748B),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          const Divider(color: Color(0xFFF1F5F9), height: 1),
+          const SizedBox(height: 16),
+          child,
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final categoriesAsync = ref.watch(categoriesProvider);
-    final isDesktop = MediaQuery.of(context).size.width > 600;
+    final size = MediaQuery.of(context).size;
+    final isMobile = size.width < 768;
+    final isDesktop = size.width > 900;
 
-    return AlertDialog(
-      title: Text(widget.product == null ? 'Add Product' : 'Edit Product'),
-      content: SizedBox(
-        width: 600,
-        child: Form(
-          key: _formKey,
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // SKU & Name
-                isDesktop
-                    ? Row(
-                        children: [
-                          Expanded(
-                            child: TextFormField(
-                              controller: _skuController,
-                              decoration: const InputDecoration(labelText: 'SKU Code'),
-                              validator: (v) => v == null || v.isEmpty ? 'Required' : null,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: TextFormField(
-                              controller: _nameController,
-                              decoration: const InputDecoration(labelText: 'Product Name'),
-                              validator: (v) => v == null || v.isEmpty ? 'Required' : null,
-                            ),
-                          ),
-                        ],
-                      )
-                    : Column(
-                        children: [
-                          TextFormField(
-                            controller: _skuController,
-                            decoration: const InputDecoration(labelText: 'SKU Code'),
-                            validator: (v) => v == null || v.isEmpty ? 'Required' : null,
-                          ),
-                          const SizedBox(height: 12),
-                          TextFormField(
-                            controller: _nameController,
-                            decoration: const InputDecoration(labelText: 'Product Name'),
-                            validator: (v) => v == null || v.isEmpty ? 'Required' : null,
-                          ),
-                        ],
-                      ),
-                const SizedBox(height: 12),
-
-                // Brand & Category Dropdown
-                isDesktop
-                    ? Row(
-                        children: [
-                          Expanded(
-                            child: TextFormField(
-                              controller: _brandController,
-                              decoration: const InputDecoration(labelText: 'Brand / Maker'),
-                              validator: (v) => v == null || v.isEmpty ? 'Required' : null,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: categoriesAsync.when(
-                              data: (cats) => DropdownButtonFormField<String>(
-                                value: _selectedCategory,
-                                decoration: const InputDecoration(labelText: 'Category'),
-                                items: cats.map((c) => DropdownMenuItem(value: c.name, child: Text(c.name))).toList(),
-                                onChanged: (val) => setState(() => _selectedCategory = val),
-                              ),
-                              loading: () => const Center(child: CircularProgressIndicator()),
-                              error: (_, __) => const Text('Error loading categories'),
-                            ),
-                          ),
-                        ],
-                      )
-                    : Column(
-                        children: [
-                          TextFormField(
-                            controller: _brandController,
-                            decoration: const InputDecoration(labelText: 'Brand / Maker'),
-                            validator: (v) => v == null || v.isEmpty ? 'Required' : null,
-                          ),
-                          const SizedBox(height: 12),
-                          categoriesAsync.when(
-                            data: (cats) => DropdownButtonFormField<String>(
-                              value: _selectedCategory,
-                              decoration: const InputDecoration(labelText: 'Category'),
-                              items: cats.map((c) => DropdownMenuItem(value: c.name, child: Text(c.name))).toList(),
-                              onChanged: (val) => setState(() => _selectedCategory = val),
-                            ),
-                            loading: () => const Center(child: CircularProgressIndicator()),
-                            error: (_, __) => const Text('Error loading categories'),
-                          ),
-                        ],
-                      ),
-                const SizedBox(height: 12),
-
-                // MRP, Selling Price & Stock
-                isDesktop
-                    ? Row(
-                        children: [
-                          Expanded(
-                            child: TextFormField(
-                              controller: _mrpController,
-                              keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(labelText: 'Market Retail Price (MRP)'),
-                              validator: (v) => _variants.isEmpty && (v == null || v.isEmpty) ? 'Required' : null,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: TextFormField(
-                              controller: _priceController,
-                              keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(labelText: 'Selling Price'),
-                              validator: (v) => _variants.isEmpty && (v == null || v.isEmpty) ? 'Required' : null,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: TextFormField(
-                              controller: _stockController,
-                              keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(labelText: 'Stock Units'),
-                              validator: (v) => _variants.isEmpty && (v == null || v.isEmpty) ? 'Required' : null,
-                            ),
-                          ),
-                        ],
-                      )
-                    : Column(
-                        children: [
-                          TextFormField(
-                            controller: _mrpController,
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(labelText: 'Market Retail Price (MRP)'),
-                            validator: (v) => _variants.isEmpty && (v == null || v.isEmpty) ? 'Required' : null,
-                          ),
-                          const SizedBox(height: 12),
-                          TextFormField(
-                            controller: _priceController,
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(labelText: 'Selling Price'),
-                            validator: (v) => _variants.isEmpty && (v == null || v.isEmpty) ? 'Required' : null,
-                          ),
-                          const SizedBox(height: 12),
-                          TextFormField(
-                            controller: _stockController,
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(labelText: 'Stock Units'),
-                            validator: (v) => _variants.isEmpty && (v == null || v.isEmpty) ? 'Required' : null,
-                          ),
-                        ],
-                      ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _shippingFeeController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Shipping Fee (₹)',
-                    hintText: 'Enter shipping fee (0 or empty for Free)',
-                  ),
-                  validator: (v) {
-                    if (v != null && v.isNotEmpty && double.tryParse(v) == null) {
-                      return 'Enter a valid number';
-                    }
-                    return null;
-                  },
+    final dialogContent = Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 1,
+        shadowColor: Colors.black.withValues(alpha: 0.05),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              widget.product == null ? 'Add New Product' : 'Edit Product',
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF0F172A)),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            Text(
+              widget.product == null
+                  ? 'Complete product details, pricing, variants, and photos'
+                  : 'SKU: ${_skuController.text}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.normal),
+            ),
+          ],
+        ),
+        leading: IconButton(
+          icon: const Icon(Icons.close, color: Color(0xFF0F172A)),
+          tooltip: 'Close',
+          onPressed: _isSaving ? null : () => Navigator.pop(context),
+        ),
+        actions: [
+          if (isMobile)
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: ElevatedButton(
+                onPressed: _isSaving ? null : _save,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0F62FE),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  elevation: 0,
                 ),
-                const SizedBox(height: 12),
-
-                // Status
-                DropdownButtonFormField<String>(
-                  value: _status,
-                  decoration: const InputDecoration(labelText: 'Status'),
-                  items: const [
-                    DropdownMenuItem(value: 'active', child: Text('Active (Visible in Store)')),
-                    DropdownMenuItem(value: 'inactive', child: Text('Inactive (Hidden from Store)')),
-                  ],
-                  onChanged: (val) => setState(() => _status = val!),
-                ),
-                const SizedBox(height: 20),
-
-                // Sizes / Quantities (Variants)
-                const Text('Sizes / Quantities (Variants)', style: TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                isDesktop
-                    ? Row(
-                        children: [
-                          Expanded(
-                            child: TextFormField(controller: _variantSizeController, decoration: const InputDecoration(hintText: 'Size (e.g. 50 ML, 1 L)')),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: TextFormField(controller: _variantMrpController, keyboardType: TextInputType.number, decoration: const InputDecoration(hintText: 'MRP')),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: TextFormField(controller: _variantPriceController, keyboardType: TextInputType.number, decoration: const InputDecoration(hintText: 'Price')),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: TextFormField(controller: _variantStockController, keyboardType: TextInputType.number, decoration: const InputDecoration(hintText: 'Stock')),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.add_circle, color: Color(0xFF0F62FE)),
-                            onPressed: _addVariant,
-                          ),
-                        ],
-                      )
-                    : Column(
-                        children: [
-                          TextFormField(controller: _variantSizeController, decoration: const InputDecoration(labelText: 'Size (e.g. 50 ML)')),
-                          const SizedBox(height: 8),
-                          Row(
+                child: _isSaving
+                    ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    : const Text('Save', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+              ),
+            ),
+        ],
+      ),
+      body: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          padding: EdgeInsets.all(isMobile ? 16 : 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Section 1: Basic Details
+              _buildSectionCard(
+                icon: Icons.inventory_2_outlined,
+                title: '1. Basic Information',
+                subtitle: 'Product identification, classification, and visibility',
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    isDesktop
+                        ? Row(
                             children: [
                               Expanded(
-                                child: TextFormField(controller: _variantMrpController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'MRP')),
+                                child: TextFormField(
+                                  controller: _skuController,
+                                  decoration: const InputDecoration(labelText: 'SKU Code', hintText: 'e.g. PERF-001'),
+                                  validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+                                ),
                               ),
-                              const SizedBox(width: 8),
+                              const SizedBox(width: 16),
                               Expanded(
-                                child: TextFormField(controller: _variantPriceController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Selling Price')),
+                                flex: 2,
+                                child: TextFormField(
+                                  controller: _nameController,
+                                  decoration: const InputDecoration(labelText: 'Product Name', hintText: 'e.g. Royal Amber Oud'),
+                                  validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+                                ),
+                              ),
+                            ],
+                          )
+                        : Column(
+                            children: [
+                              TextFormField(
+                                controller: _skuController,
+                                decoration: const InputDecoration(labelText: 'SKU Code', hintText: 'e.g. PERF-001'),
+                                validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+                              ),
+                              const SizedBox(height: 14),
+                              TextFormField(
+                                controller: _nameController,
+                                decoration: const InputDecoration(labelText: 'Product Name', hintText: 'e.g. Royal Amber Oud'),
+                                validator: (v) => v == null || v.isEmpty ? 'Required' : null,
                               ),
                             ],
                           ),
-                          const SizedBox(height: 8),
-                          Row(
+                    const SizedBox(height: 14),
+                    isDesktop
+                        ? Row(
                             children: [
                               Expanded(
-                                child: TextFormField(controller: _variantStockController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Stock Units')),
+                                child: TextFormField(
+                                  controller: _brandController,
+                                  decoration: const InputDecoration(labelText: 'Brand / Maker', hintText: 'e.g. Izzfah Noobi'),
+                                  validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+                                ),
                               ),
-                              IconButton(
-                                icon: const Icon(Icons.add_circle, color: Color(0xFF0F62FE)),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: categoriesAsync.when(
+                                  data: (cats) => DropdownButtonFormField<String>(
+                                    value: _selectedCategory,
+                                    decoration: const InputDecoration(labelText: 'Category'),
+                                    items: cats.map((c) => DropdownMenuItem(value: c.name, child: Text(c.name))).toList(),
+                                    onChanged: (val) => setState(() => _selectedCategory = val),
+                                    validator: (v) => v == null ? 'Please select a category' : null,
+                                  ),
+                                  loading: () => const Center(child: CircularProgressIndicator()),
+                                  error: (_, _) => const Text('Error loading categories'),
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: DropdownButtonFormField<String>(
+                                  value: _status,
+                                  decoration: const InputDecoration(labelText: 'Store Status'),
+                                  items: const [
+                                    DropdownMenuItem(value: 'active', child: Text('Active (Visible)')),
+                                    DropdownMenuItem(value: 'inactive', child: Text('Inactive (Hidden)')),
+                                  ],
+                                  onChanged: (val) => setState(() => _status = val!),
+                                ),
+                              ),
+                            ],
+                          )
+                        : Column(
+                            children: [
+                              TextFormField(
+                                controller: _brandController,
+                                decoration: const InputDecoration(labelText: 'Brand / Maker', hintText: 'e.g. Izzfah Noobi'),
+                                validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+                              ),
+                              const SizedBox(height: 14),
+                              categoriesAsync.when(
+                                data: (cats) => DropdownButtonFormField<String>(
+                                  value: _selectedCategory,
+                                  decoration: const InputDecoration(labelText: 'Category'),
+                                  items: cats.map((c) => DropdownMenuItem(value: c.name, child: Text(c.name))).toList(),
+                                  onChanged: (val) => setState(() => _selectedCategory = val),
+                                  validator: (v) => v == null ? 'Please select a category' : null,
+                                ),
+                                loading: () => const Center(child: CircularProgressIndicator()),
+                                error: (_, _) => const Text('Error loading categories'),
+                              ),
+                              const SizedBox(height: 14),
+                              DropdownButtonFormField<String>(
+                                value: _status,
+                                decoration: const InputDecoration(labelText: 'Store Status'),
+                                items: const [
+                                  DropdownMenuItem(value: 'active', child: Text('Active (Visible in Store)')),
+                                  DropdownMenuItem(value: 'inactive', child: Text('Inactive (Hidden from Store)')),
+                                ],
+                                onChanged: (val) => setState(() => _status = val!),
+                              ),
+                            ],
+                          ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Section 2: Pricing & Stock (Default)
+              _buildSectionCard(
+                icon: Icons.payments_outlined,
+                title: '2. Pricing & Stock (Base)',
+                subtitle: 'Base values used for single-size items or as fallbacks',
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    isDesktop
+                        ? Row(
+                            children: [
+                              Expanded(
+                                child: TextFormField(
+                                  controller: _mrpController,
+                                  keyboardType: TextInputType.number,
+                                  decoration: const InputDecoration(labelText: 'Market Price (MRP ₹)', hintText: 'e.g. 1999'),
+                                  validator: (v) => _variants.isEmpty && (v == null || v.isEmpty) ? 'Required' : null,
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: TextFormField(
+                                  controller: _priceController,
+                                  keyboardType: TextInputType.number,
+                                  decoration: const InputDecoration(labelText: 'Selling Price (₹)', hintText: 'e.g. 1499'),
+                                  validator: (v) => _variants.isEmpty && (v == null || v.isEmpty) ? 'Required' : null,
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: TextFormField(
+                                  controller: _stockController,
+                                  keyboardType: TextInputType.number,
+                                  decoration: const InputDecoration(labelText: 'Stock Units', hintText: 'e.g. 50'),
+                                  validator: (v) => _variants.isEmpty && (v == null || v.isEmpty) ? 'Required' : null,
+                                ),
+                              ),
+                            ],
+                          )
+                        : Column(
+                            children: [
+                              TextFormField(
+                                controller: _mrpController,
+                                keyboardType: TextInputType.number,
+                                decoration: const InputDecoration(labelText: 'Market Retail Price (MRP ₹)', hintText: 'e.g. 1999'),
+                                validator: (v) => _variants.isEmpty && (v == null || v.isEmpty) ? 'Required' : null,
+                              ),
+                              const SizedBox(height: 14),
+                              TextFormField(
+                                controller: _priceController,
+                                keyboardType: TextInputType.number,
+                                decoration: const InputDecoration(labelText: 'Selling Price (₹)', hintText: 'e.g. 1499'),
+                                validator: (v) => _variants.isEmpty && (v == null || v.isEmpty) ? 'Required' : null,
+                              ),
+                              const SizedBox(height: 14),
+                              TextFormField(
+                                controller: _stockController,
+                                keyboardType: TextInputType.number,
+                                decoration: const InputDecoration(labelText: 'Stock Units', hintText: 'e.g. 50'),
+                                validator: (v) => _variants.isEmpty && (v == null || v.isEmpty) ? 'Required' : null,
+                              ),
+                            ],
+                          ),
+                    const SizedBox(height: 14),
+                    TextFormField(
+                      controller: _shippingFeeController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'Shipping Fee (₹)',
+                        hintText: 'Enter 0 or leave empty for Free Shipping',
+                        prefixIcon: Icon(Icons.local_shipping_outlined),
+                      ),
+                      validator: (v) {
+                        if (v != null && v.isNotEmpty && double.tryParse(v) == null) {
+                          return 'Enter a valid number';
+                        }
+                        return null;
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Section 3: Sizes / Quantities (Variants)
+              _buildSectionCard(
+                icon: Icons.tune_outlined,
+                title: '3. Sizes / Quantities (Variants)',
+                subtitle: 'Add specific sizes (e.g. S, M, L, XL, 42, 44, Standard) with individual prices and stock',
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    isDesktop
+                        ? Row(
+                            children: [
+                              Expanded(
+                                flex: 2,
+                                child: TextFormField(
+                                  controller: _variantSizeController,
+                                  decoration: const InputDecoration(labelText: 'Size / Variant', hintText: 'e.g. M, L, XL or 42, 44'),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: TextFormField(
+                                  controller: _variantMrpController,
+                                  keyboardType: TextInputType.number,
+                                  decoration: const InputDecoration(labelText: 'MRP (₹)', hintText: 'MRP'),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: TextFormField(
+                                  controller: _variantPriceController,
+                                  keyboardType: TextInputType.number,
+                                  decoration: const InputDecoration(labelText: 'Price (₹)', hintText: 'Selling'),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: TextFormField(
+                                  controller: _variantStockController,
+                                  keyboardType: TextInputType.number,
+                                  decoration: const InputDecoration(labelText: 'Stock', hintText: 'Units'),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              ElevatedButton.icon(
+                                icon: const Icon(Icons.add, size: 18),
+                                label: const Text('Add'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF0F62FE),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
+                                onPressed: _addVariant,
+                              ),
+                            ],
+                          )
+                        : Column(
+                            children: [
+                              TextFormField(
+                                controller: _variantSizeController,
+                                decoration: const InputDecoration(labelText: 'Size / Variant', hintText: 'e.g. M, L, XL or 42, 44'),
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: TextFormField(
+                                      controller: _variantMrpController,
+                                      keyboardType: TextInputType.number,
+                                      decoration: const InputDecoration(labelText: 'MRP (₹)'),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: TextFormField(
+                                      controller: _variantPriceController,
+                                      keyboardType: TextInputType.number,
+                                      decoration: const InputDecoration(labelText: 'Price (₹)'),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: TextFormField(
+                                      controller: _variantStockController,
+                                      keyboardType: TextInputType.number,
+                                      decoration: const InputDecoration(labelText: 'Stock'),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              ElevatedButton.icon(
+                                icon: const Icon(Icons.add),
+                                label: const Text('Add Variant to List'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF0F62FE),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  minimumSize: const Size.fromHeight(48),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
                                 onPressed: _addVariant,
                               ),
                             ],
                           ),
-                        ],
-                      ),
-                if (_variants.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: _variants.length,
-                    itemBuilder: (context, idx) {
-                      final v = _variants[idx];
-                      return Card(
-                        color: Theme.of(context).colorScheme.surface,
-                        margin: const EdgeInsets.only(bottom: 8),
-                        child: ListTile(
-                          title: Text('${v.size} - ₹${v.sellingPrice.toStringAsFixed(0)} (MRP: ₹${v.mrp.toStringAsFixed(0)})', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white)),
-                          subtitle: Text('Stock: ${v.stock} units', style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.delete, color: Colors.red),
-                            onPressed: () => setState(() => _variants.removeAt(idx)),
-                          ),
+                    if (_variants.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
                         ),
-                      );
-                    },
-                  ),
-                ],
-                const SizedBox(height: 12),
+                        padding: const EdgeInsets.all(12),
+                        child: ListView.separated(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: _variants.length,
+                          separatorBuilder: (_, _) => const Divider(color: Color(0xFFE2E8F0), height: 16),
+                          itemBuilder: (context, idx) {
+                            final v = _variants[idx];
+                            return Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFEFF6FF),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(color: const Color(0xFFBFDBFE)),
+                                  ),
+                                  child: Text(
+                                    v.size,
+                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF1E40AF)),
+                                  ),
+                                ),
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        '₹${v.sellingPrice.toStringAsFixed(0)} (MRP: ₹${v.mrp.toStringAsFixed(0)})',
+                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0F172A)),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        'Available Stock: ${v.stock} units',
+                                        style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                                  tooltip: 'Remove variant',
+                                  onPressed: () => setState(() => _variants.removeAt(idx)),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
 
-                // Description
-                TextFormField(
+              // Section 4: Description
+              _buildSectionCard(
+                icon: Icons.description_outlined,
+                title: '4. Product Description',
+                subtitle: 'Overview, material, fit, and lifestyle details displayed to customers',
+                child: TextFormField(
                   controller: _descriptionController,
-                  maxLines: 3,
-                  decoration: const InputDecoration(labelText: 'Description'),
+                  maxLines: 4,
+                  decoration: const InputDecoration(
+                    labelText: 'Full Description',
+                    hintText: 'Enter product details, fabric material, fit, dial size, strap type, care instructions...',
+                    alignLabelWithHint: true,
+                  ),
                   validator: (v) => v == null || v.isEmpty ? 'Required' : null,
                 ),
-                const SizedBox(height: 20),
+              ),
+              const SizedBox(height: 20),
 
-                // Dynamic Specifications Adding
-                const Text('Specifications', style: TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                isDesktop
-                    ? Row(
-                        children: [
-                          Expanded(
-                            child: TextFormField(controller: _specKeyController, decoration: const InputDecoration(hintText: 'Size, Color, Notes...')),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: TextFormField(controller: _specValController, decoration: const InputDecoration(hintText: '100ML, 0% Alcohol...')),
-                          ),
-                          IconButton(icon: const Icon(Icons.add_circle, color: Color(0xFF0F62FE)), onPressed: _addSpecification),
-                        ],
-                      )
-                    : Column(
-                        children: [
-                          TextFormField(controller: _specKeyController, decoration: const InputDecoration(hintText: 'Specification Key (e.g. Size)')),
-                          const SizedBox(height: 12),
-                          Row(
+              // Section 5: Specifications
+              _buildSectionCard(
+                icon: Icons.list_alt_outlined,
+                title: '5. Specifications (Optional)',
+                subtitle: 'Custom key-value specifications (e.g. Material: Cotton, Dial: 42mm, Fit: Slim)',
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    isDesktop
+                        ? Row(
                             children: [
                               Expanded(
-                                child: TextFormField(controller: _specValController, decoration: const InputDecoration(hintText: 'Specification Value (e.g. 100ML)')),
+                                child: TextFormField(
+                                  controller: _specKeyController,
+                                  decoration: const InputDecoration(labelText: 'Feature / Spec Name', hintText: 'e.g. Material, Color, Fit, Movement'),
+                                ),
                               ),
-                              IconButton(icon: const Icon(Icons.add_circle, color: Color(0xFF0F62FE)), onPressed: _addSpecification),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: TextFormField(
+                                  controller: _specValController,
+                                  decoration: const InputDecoration(labelText: 'Spec Value', hintText: 'e.g. 100% Cotton, Stainless Steel, Slim Fit'),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              ElevatedButton.icon(
+                                icon: const Icon(Icons.add, size: 18),
+                                label: const Text('Add Spec'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF0F62FE),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
+                                onPressed: _addSpecification,
+                              ),
+                            ],
+                          )
+                        : Column(
+                            children: [
+                              TextFormField(
+                                controller: _specKeyController,
+                                decoration: const InputDecoration(labelText: 'Feature / Spec Name', hintText: 'e.g. Material, Size, Movement'),
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: TextFormField(
+                                      controller: _specValController,
+                                      decoration: const InputDecoration(labelText: 'Spec Value', hintText: 'e.g. Cotton, 42mm, Quartz'),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF0F62FE),
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                    ),
+                                    onPressed: _addSpecification,
+                                    child: const Text('Add'),
+                                  ),
+                                ],
+                              ),
                             ],
                           ),
-                        ],
-                      ),
-                if (_specifications.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: _specifications.entries.map((e) {
-                      return Chip(
-                        label: Text('${e.key}: ${e.value}', style: const TextStyle(fontSize: 12)),
-                        onDeleted: () => setState(() => _specifications.remove(e.key)),
-                      );
-                    }).toList(),
-                  ),
-                ],
-                const SizedBox(height: 20),
-
-                // Images Section
-                const Text('Product Images', style: TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                isDesktop
-                    ? Row(
-                        children: [
-                          ElevatedButton.icon(
-                            onPressed: _pickImages,
-                            icon: const Icon(Icons.upload_file),
-                            label: const Text('Add Images'),
-                            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF64748B)),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: TextFormField(
-                              controller: _imageUrlController,
-                              decoration: const InputDecoration(
-                                hintText: 'Or paste direct image URL link',
-                                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                              ),
+                    if (_specifications.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: _specifications.entries.map((e) {
+                          return Container(
+                            constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width - 60),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: const Color(0xFFCBD5E1)),
                             ),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.add_circle, color: Color(0xFF0F62FE)),
-                            onPressed: () {
-                              final val = _imageUrlController.text.trim();
-                              if (val.isNotEmpty) {
-                                setState(() {
-                                  _images.add(val);
-                                  _imageUrlController.clear();
-                                });
-                              }
-                            },
-                          )
-                        ],
-                      )
-                    : Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          ElevatedButton.icon(
-                            onPressed: _pickImages,
-                            icon: const Icon(Icons.upload_file),
-                            label: const Text('Add Images'),
-                            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF64748B)),
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
+                            padding: const EdgeInsets.only(left: 12, right: 6, top: 4, bottom: 4),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Flexible(
+                                  child: Text.rich(
+                                    TextSpan(
+                                      children: [
+                                        TextSpan(text: '${e.key}: ', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A))),
+                                        TextSpan(text: e.value, style: const TextStyle(fontSize: 13, color: Color(0xFF475569))),
+                                      ],
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                GestureDetector(
+                                  onTap: () => setState(() => _specifications.remove(e.key)),
+                                  child: const Icon(Icons.close, size: 16, color: Color(0xFF64748B)),
+                                ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Section 6: Product Images
+              _buildSectionCard(
+                icon: Icons.photo_library_outlined,
+                title: '6. Product Images',
+                subtitle: 'Upload product pictures (${_images.length + _newImageBytes.length} total attached)',
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    isDesktop
+                        ? Row(
                             children: [
+                              ElevatedButton.icon(
+                                onPressed: _isSaving ? null : _pickImages,
+                                icon: const Icon(Icons.add_photo_alternate, size: 20),
+                                label: const Text('Upload Photos from Device'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF0F62FE),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
+                              ),
+                              const SizedBox(width: 16),
                               Expanded(
                                 child: TextFormField(
                                   controller: _imageUrlController,
                                   decoration: const InputDecoration(
-                                    hintText: 'Or paste direct image URL link',
-                                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                    labelText: 'Or Paste Direct Image Link (URL)',
+                                    hintText: 'https://...',
+                                    prefixIcon: Icon(Icons.link),
                                   ),
                                 ),
                               ),
-                              IconButton(
-                                icon: const Icon(Icons.add_circle, color: Color(0xFF0F62FE)),
+                              const SizedBox(width: 12),
+                              OutlinedButton(
                                 onPressed: () {
                                   final val = _imageUrlController.text.trim();
                                   if (val.isNotEmpty) {
@@ -858,89 +1211,319 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                                     });
                                   }
                                 },
-                              )
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: const Color(0xFF0F62FE),
+                                  side: const BorderSide(color: Color(0xFF0F62FE), width: 1.5),
+                                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
+                                child: const Text('Add Link', style: TextStyle(fontWeight: FontWeight.bold)),
+                              ),
+                            ],
+                          )
+                        : Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              ElevatedButton.icon(
+                                onPressed: _isSaving ? null : _pickImages,
+                                icon: const Icon(Icons.add_photo_alternate, size: 20),
+                                label: const Text('Upload Photos from Device'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF0F62FE),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  minimumSize: const Size.fromHeight(48),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: TextFormField(
+                                      controller: _imageUrlController,
+                                      decoration: const InputDecoration(
+                                        labelText: 'Paste Image Link (URL)',
+                                        hintText: 'https://...',
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  ElevatedButton(
+                                    onPressed: () {
+                                      final val = _imageUrlController.text.trim();
+                                      if (val.isNotEmpty) {
+                                        setState(() {
+                                          _images.add(val);
+                                          _imageUrlController.clear();
+                                        });
+                                      }
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF0F62FE),
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                    ),
+                                    child: const Text('Add'),
+                                  ),
+                                ],
+                              ),
                             ],
                           ),
+                    const SizedBox(height: 16),
+                    if (_images.isEmpty && _newImageBytes.isEmpty)
+                      Container(
+                        padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                        ),
+                        child: const Center(
+                          child: Column(
+                            children: [
+                              Icon(Icons.photo_outlined, size: 40, color: Color(0xFF94A3B8)),
+                              SizedBox(height: 8),
+                              Text(
+                                'No photos added yet',
+                                style: TextStyle(color: Color(0xFF475569), fontSize: 14, fontWeight: FontWeight.bold),
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                'Tap "Upload Photos" to pick images from your device or paste a URL.',
+                                style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    else
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
+                        children: [
+                          ...List.generate(_images.length, (idx) {
+                            final url = _images[idx];
+                            return Stack(
+                              children: [
+                                Container(
+                                  height: 90,
+                                  width: 90,
+                                  decoration: BoxDecoration(
+                                    border: Border.all(color: const Color(0xFFCBD5E1), width: 1.5),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  clipBehavior: Clip.antiAlias,
+                                  child: AppNetworkImage.thumbnail(
+                                    imageUrl: url,
+                                    size: 90,
+                                    fit: BoxFit.cover,
+                                    errorWidget: const Center(
+                                      child: Icon(Icons.broken_image, color: Colors.grey, size: 28),
+                                    ),
+                                  ),
+                                ),
+                                Positioned(
+                                  left: 4,
+                                  bottom: 4,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF0F172A).withValues(alpha: 0.8),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: const Text(
+                                      'Saved',
+                                      style: TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold),
+                                    ),
+                                  ),
+                                ),
+                                Positioned(
+                                  right: 4,
+                                  top: 4,
+                                  child: CircleAvatar(
+                                    radius: 12,
+                                    backgroundColor: Colors.red.shade700,
+                                    child: GestureDetector(
+                                      onTap: () => setState(() => _images.removeAt(idx)),
+                                      child: const Icon(Icons.close, color: Colors.white, size: 14),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            );
+                          }),
+                          ...List.generate(_newImageBytes.length, (idx) {
+                            final bytes = _newImageBytes[idx];
+                            return Stack(
+                              children: [
+                                Container(
+                                  height: 90,
+                                  width: 90,
+                                  decoration: BoxDecoration(
+                                    border: Border.all(color: const Color(0xFF0F62FE), width: 2),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  clipBehavior: Clip.antiAlias,
+                                  child: Image.memory(
+                                    bytes,
+                                    fit: BoxFit.cover,
+                                    cacheWidth: 200,
+                                    cacheHeight: 200,
+                                  ),
+                                ),
+                                Positioned(
+                                  left: 4,
+                                  bottom: 4,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF16A34A),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: const Text(
+                                      'New',
+                                      style: TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold),
+                                    ),
+                                  ),
+                                ),
+                                Positioned(
+                                  right: 4,
+                                  top: 4,
+                                  child: CircleAvatar(
+                                    radius: 12,
+                                    backgroundColor: Colors.red.shade700,
+                                    child: GestureDetector(
+                                      onTap: () => setState(() {
+                                        _newImageBytes.removeAt(idx);
+                                        _newImageNames.removeAt(idx);
+                                      }),
+                                      child: const Icon(Icons.close, color: Colors.white, size: 14),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            );
+                          }),
                         ],
                       ),
-                const SizedBox(height: 12),
-                
-                // Show current and newly picked image previews
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  children: [
-                    ...List.generate(_images.length, (idx) {
-                      final url = _images[idx];
-                      return Stack(
-                        children: [
-                          Container(
-                            height: 70,
-                            width: 70,
-                            decoration: BoxDecoration(border: Border.all(color: Colors.grey), borderRadius: BorderRadius.circular(8)),
-                            clipBehavior: Clip.antiAlias,
-                            child: Image.network(url, fit: BoxFit.cover),
-                          ),
-                          Positioned(
-                            right: 0,
-                            top: 0,
-                            child: CircleAvatar(
-                              radius: 10,
-                              backgroundColor: Colors.red,
-                              child: GestureDetector(
-                                onTap: () => setState(() => _images.removeAt(idx)),
-                                child: const Icon(Icons.close, color: Colors.white, size: 12),
-                              ),
-                            ),
-                          )
-                        ],
-                      );
-                    }),
-                    ...List.generate(_newImageBytes.length, (idx) {
-                      final bytes = _newImageBytes[idx];
-                      return Stack(
-                        children: [
-                          Container(
-                            height: 70,
-                            width: 70,
-                            decoration: BoxDecoration(border: Border.all(color: Colors.blue), borderRadius: BorderRadius.circular(8)),
-                            clipBehavior: Clip.antiAlias,
-                            child: Image.memory(bytes, fit: BoxFit.cover),
-                          ),
-                          Positioned(
-                            right: 0,
-                            top: 0,
-                            child: CircleAvatar(
-                              radius: 10,
-                              backgroundColor: Colors.red,
-                              child: GestureDetector(
-                                onTap: () => setState(() {
-                                  _newImageBytes.removeAt(idx);
-                                  _newImageNames.removeAt(idx);
-                                }),
-                                child: const Icon(Icons.close, color: Colors.white, size: 12),
-                              ),
-                            ),
-                          )
-                        ],
-                      );
-                    }),
                   ],
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(height: 24),
+            ],
           ),
         ),
       ),
-      actions: [
-        TextButton(onPressed: _isSaving ? null : () => Navigator.pop(context), child: const Text('Cancel')),
-        ElevatedButton(
-          onPressed: _isSaving ? null : _save,
-          child: _isSaving
-              ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-              : const Text('Save Product'),
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: const Border(top: BorderSide(color: Color(0xFFE2E8F0), width: 1.5)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              offset: const Offset(0, -3),
+              blurRadius: 10,
+            ),
+          ],
         ),
-      ],
+        child: SafeArea(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              if (_isSaving && _uploadStatus.isNotEmpty)
+                Expanded(
+                  child: Row(
+                    children: [
+                      const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF0F62FE)),
+                      ),
+                      const SizedBox(width: 10),
+                      Flexible(
+                        child: Text(
+                          _uploadStatus,
+                          style: const TextStyle(fontSize: 13, color: Color(0xFF0F62FE), fontWeight: FontWeight.bold),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                const SizedBox(),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  OutlinedButton(
+                    onPressed: _isSaving ? null : () => Navigator.pop(context),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF64748B),
+                      side: const BorderSide(color: Color(0xFFCBD5E1), width: 1.5),
+                      padding: EdgeInsets.symmetric(horizontal: isMobile ? 14 : 20, vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    child: const Text('Cancel', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                  const SizedBox(width: 10),
+                  ElevatedButton.icon(
+                    onPressed: _isSaving ? null : _save,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0F62FE),
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(horizontal: isMobile ? 14 : 24, vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      elevation: 0,
+                    ),
+                    icon: _isSaving
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                          )
+                        : const Icon(Icons.check_circle_outline, size: 20),
+                    label: Text(
+                      _isSaving
+                          ? 'Saving...'
+                          : (widget.product == null ? 'Save Product' : 'Update Product'),
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    final themedContent = Theme(
+      data: AppTheme.adminTheme,
+      child: dialogContent,
+    );
+
+    if (isMobile) {
+      return Dialog.fullscreen(
+        child: themedContent,
+      );
+    }
+
+    return Dialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      clipBehavior: Clip.antiAlias,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: 900,
+          maxHeight: size.height * 0.92,
+          minWidth: size.width < 650 ? size.width * 0.92 : 600,
+        ),
+        child: themedContent,
+      ),
     );
   }
 }

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:al_ruby_ecommerce/presentation/providers/providers.dart';
-import 'package:al_ruby_ecommerce/data/models/product.dart';
+import 'package:al_ruby_ecommerce/presentation/widgets/app_network_image.dart';
 
 class WishlistView extends ConsumerWidget {
   const WishlistView({super.key});
@@ -67,14 +67,11 @@ class WishlistView extends ConsumerWidget {
                       children: [
                         // Image
                         if (product.images.isNotEmpty)
-                          ClipRRect(
+                          AppNetworkImage.thumbnail(
+                            imageUrl: product.images.first,
+                            size: 70,
+                            fit: BoxFit.cover,
                             borderRadius: BorderRadius.circular(8),
-                            child: Image.network(
-                              product.images.first,
-                              height: 70,
-                              width: 70,
-                              fit: BoxFit.cover,
-                            ),
                           )
                         else
                           Container(
@@ -95,19 +92,19 @@ class WishlistView extends ConsumerWidget {
                             children: [
                               Text(
                                 product.name,
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0F172A)),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
                               const SizedBox(height: 4),
                               Text(
                                 product.brand,
-                                style: const TextStyle(color: Color(0xFFC6A473), fontSize: 12, fontWeight: FontWeight.bold),
+                                style: const TextStyle(color: Color(0xFF1E60D5), fontSize: 12, fontWeight: FontWeight.bold),
                               ),
                               const SizedBox(height: 8),
                               Text(
                                 '₹${product.sellingPrice.toStringAsFixed(0)}',
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.white),
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF0F172A)),
                               ),
                             ],
                           ),

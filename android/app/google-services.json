@@ -1,21 +1,21 @@
 {
   "project_info": {
-    "project_number": "850326169710",
-    "project_id": "alrubyback",
-    "storage_bucket": "alrubyback.firebasestorage.app"
+    "project_number": "1092018996574",
+    "project_id": "webcart-store-945ab",
+    "storage_bucket": "webcart-store-945ab.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:850326169710:android:a50b751bef999fbb8dde7f",
+        "mobilesdk_app_id": "1:1092018996574:android:ae19fc2db5056dfb56bbcf",
         "android_client_info": {
-          "package_name": "com.alruby.perfumes.al_ruby_ecommerce"
+          "package_name": "com.webcart.store"
         }
       },
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyAb6gZCGOjX5X5TUKH_CB2dUPyRIXFx-Xk"
+          "current_key": "AIzaSyApVeCDb4n8gKgDDF3OVLlLcFj1iH13zxo"
         }
       ],
       "services": {

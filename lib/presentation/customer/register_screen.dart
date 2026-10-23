@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:al_ruby_ecommerce/presentation/providers/providers.dart';
+import 'package:al_ruby_ecommerce/presentation/widgets/app_network_image.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -53,7 +54,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
       // Init empty wishlist & cart
       ref.read(wishlistProvider.notifier).loadWishlist([], []);
-      ref.read(cartProvider.notifier).clear();
+      ref.read(cartProvider.notifier).syncCart();
 
       if (!mounted) return;
       if (userModel.role == 'admin') {
@@ -79,10 +80,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     final businessInfoAsync = ref.watch(businessInfoProvider);
 
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.background,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: const Icon(Icons.arrow_back, color: Color(0xFF0F172A)),
           onPressed: () => context.pop(),
         ),
       ),
@@ -99,10 +102,16 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 children: [
                   businessInfoAsync.when(
                     data: (info) => info.companyLogoUrl.isNotEmpty
-                        ? Image.network(info.companyLogoUrl, height: 100, fit: BoxFit.contain)
-                        : _buildTextLogo(info.companyName),
-                    loading: () => const Center(child: CircularProgressIndicator()),
-                    error: (_, __) => _buildTextLogo('Al Ruby Perfumes'),
+                        ? AppNetworkImage(
+                            imageUrl: info.companyLogoUrl,
+                            height: 100,
+                            cacheHeight: 200,
+                            fit: BoxFit.contain,
+                            fallbackAsset: 'assets/logo/logo.png',
+                          )
+                        : Image.asset('assets/logo/logo.png', height: 100, fit: BoxFit.contain),
+                    loading: () => Image.asset('assets/logo/logo.png', height: 100, fit: BoxFit.contain),
+                    error: (_, _) => Image.asset('assets/logo/logo.png', height: 100, fit: BoxFit.contain),
                   ),
                   const SizedBox(height: 32),
                   const Text(
@@ -110,27 +119,52 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     style: TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: Color(0xFF0F172A),
                     ),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Sign up to start shopping premium perfumes.',
+                    'Sign up to start shopping with Izzfah Noobi.',
                     style: TextStyle(
                       fontSize: 14,
-                      color: Colors.grey,
+                      color: Color(0xFF64748B),
                     ),
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 24),
+                  OutlinedButton.icon(
+                    onPressed: () => context.go('/login'),
+                    icon: const Icon(Icons.chat, size: 18, color: Color(0xFF1E60D5)),
+                    label: const Text('Sign In / Register with WhatsApp OTP'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF1E60D5),
+                      side: const BorderSide(color: Color(0xFF1E60D5)),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      const Expanded(child: Divider(color: Color(0xFFE2E8F0))),
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 10),
+                        child: Text(
+                          'OR USE EMAIL',
+                          style: TextStyle(color: Color(0xFF64748B), fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.8),
+                        ),
+                      ),
+                      const Expanded(child: Divider(color: Color(0xFFE2E8F0))),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
                   if (_errorMessage != null) ...[
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.red.withOpacity(0.1),
+                        color: Colors.red.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.red.withOpacity(0.5)),
+                        border: Border.all(color: Colors.red.withValues(alpha: 0.5)),
                       ),
                       child: Text(
                         _errorMessage!,
@@ -141,7 +175,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   ],
                   TextFormField(
                     controller: _nameController,
-                    style: const TextStyle(color: Colors.white),
+                    style: const TextStyle(color: Color(0xFF0F172A)),
                     decoration: const InputDecoration(
                       hintText: 'Full Name',
                       prefixIcon: Icon(Icons.person_outline),
@@ -155,7 +189,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   TextFormField(
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
-                    style: const TextStyle(color: Colors.white),
+                    style: const TextStyle(color: Color(0xFF0F172A)),
                     decoration: const InputDecoration(
                       hintText: 'Email Address',
                       prefixIcon: Icon(Icons.email_outlined),
@@ -170,7 +204,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   TextFormField(
                     controller: _passwordController,
                     obscureText: true,
-                    style: const TextStyle(color: Colors.white),
+                    style: const TextStyle(color: Color(0xFF0F172A)),
                     decoration: const InputDecoration(
                       hintText: 'Password',
                       prefixIcon: Icon(Icons.lock_outlined),
@@ -185,7 +219,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   TextFormField(
                     controller: _confirmPasswordController,
                     obscureText: true,
-                    style: const TextStyle(color: Colors.white),
+                    style: const TextStyle(color: Color(0xFF0F172A)),
                     decoration: const InputDecoration(
                       hintText: 'Confirm Password',
                       prefixIcon: Icon(Icons.lock_outlined),
@@ -229,19 +263,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildTextLogo(String name) {
-    return Text(
-      name,
-      style: TextStyle(
-        fontSize: 28,
-        fontWeight: FontWeight.bold,
-        color: Theme.of(context).colorScheme.primary,
-        letterSpacing: 1.5,
-      ),
-      textAlign: TextAlign.center,
     );
   }
 }

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:al_ruby_ecommerce/presentation/providers/providers.dart';
 import 'package:al_ruby_ecommerce/data/models/product.dart';
 import 'package:al_ruby_ecommerce/data/models/category.dart';
+import 'package:al_ruby_ecommerce/presentation/widgets/app_network_image.dart';
 
 class ProductsView extends ConsumerStatefulWidget {
   const ProductsView({super.key});
@@ -14,7 +15,6 @@ class ProductsView extends ConsumerStatefulWidget {
 
 class _ProductsViewState extends ConsumerState<ProductsView> {
   String _searchQuery = '';
-  String? _selectedCategory;
   final TextEditingController _searchController = TextEditingController();
 
   @override
@@ -25,8 +25,9 @@ class _ProductsViewState extends ConsumerState<ProductsView> {
 
   @override
   Widget build(BuildContext context) {
+    final selectedCategory = ref.watch(selectedCategoryFilterProvider);
     final categoriesAsync = ref.watch(categoriesProvider);
-    final productsAsync = ref.watch(productsProvider(_selectedCategory));
+    final productsAsync = ref.watch(productsProvider(selectedCategory));
     final wishlist = ref.watch(wishlistProvider);
 
     return Scaffold(
@@ -43,7 +44,7 @@ class _ProductsViewState extends ConsumerState<ProductsView> {
             child: TextFormField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: 'Search perfumes...',
+                hintText: 'Search watches, shirts, pants, shoes, bags, jerseys...',
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: _searchQuery.isNotEmpty
                     ? IconButton(
@@ -67,7 +68,7 @@ class _ProductsViewState extends ConsumerState<ProductsView> {
 
           // Categories Chips
           categoriesAsync.when(
-            data: (categories) => _buildCategoryChips(categories),
+            data: (categories) => _buildCategoryChips(categories, selectedCategory),
             loading: () => const SizedBox(height: 50),
             error: (_, __) => const SizedBox(),
           ),
@@ -87,7 +88,7 @@ class _ProductsViewState extends ConsumerState<ProductsView> {
     );
   }
 
-  Widget _buildCategoryChips(List<Category> categories) {
+  Widget _buildCategoryChips(List<Category> categories, String? selectedCategory) {
     return Container(
       height: 48,
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -97,19 +98,17 @@ class _ProductsViewState extends ConsumerState<ProductsView> {
         children: [
           FilterChip(
             label: const Text('All'),
-            selected: _selectedCategory == null,
+            selected: selectedCategory == null,
             onSelected: (selected) {
               if (selected) {
-                setState(() {
-                  _selectedCategory = null;
-                });
+                ref.read(selectedCategoryFilterProvider.notifier).state = null;
               }
             },
             selectedColor: Theme.of(context).colorScheme.primary,
             labelStyle: TextStyle(
-              color: _selectedCategory == null
+              color: selectedCategory == null
                   ? Theme.of(context).colorScheme.onPrimary
-                  : Colors.white,
+                  : const Color(0xFF64748B),
               fontWeight: FontWeight.bold,
             ),
             backgroundColor: Theme.of(context).colorScheme.surface,
@@ -117,22 +116,20 @@ class _ProductsViewState extends ConsumerState<ProductsView> {
           ),
           const SizedBox(width: 8),
           ...categories.map((cat) {
-            final isSelected = _selectedCategory == cat.name;
+            final isSelected = selectedCategory == cat.name;
             return Padding(
               padding: const EdgeInsets.only(right: 8.0),
               child: FilterChip(
                 label: Text(cat.name),
                 selected: isSelected,
                 onSelected: (selected) {
-                  setState(() {
-                    _selectedCategory = selected ? cat.name : null;
-                  });
+                  ref.read(selectedCategoryFilterProvider.notifier).state = selected ? cat.name : null;
                 },
                 selectedColor: Theme.of(context).colorScheme.primary,
                 labelStyle: TextStyle(
                   color: isSelected
                       ? Theme.of(context).colorScheme.onPrimary
-                      : Colors.white,
+                      : const Color(0xFF64748B),
                   fontWeight: FontWeight.bold,
                 ),
                 backgroundColor: Theme.of(context).colorScheme.surface,
@@ -199,8 +196,8 @@ class _ProductsViewState extends ConsumerState<ProductsView> {
                     children: [
                       // Product Image
                       if (product.images.isNotEmpty)
-                        Image.network(
-                          product.images.first,
+                        AppNetworkImage.card(
+                          imageUrl: product.images.first,
                           fit: BoxFit.cover,
                           width: double.infinity,
                           height: double.infinity,
@@ -266,14 +263,14 @@ class _ProductsViewState extends ConsumerState<ProductsView> {
                     children: [
                       Text(
                         product.brand.toUpperCase(),
-                        style: const TextStyle(fontSize: 10, color: Color(0xFFC6A473), fontWeight: FontWeight.bold),
+                        style: const TextStyle(fontSize: 10, color: Color(0xFF1E60D5), fontWeight: FontWeight.bold),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 4),
                       Text(
                         product.name,
-                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -286,7 +283,7 @@ class _ProductsViewState extends ConsumerState<ProductsView> {
                             children: [
                               Text(
                                 '₹${product.sellingPrice.toStringAsFixed(0)}',
-                                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
+                                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
                               ),
                               if (product.mrp > product.sellingPrice)
                                 Text(

@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:al_ruby_ecommerce/core/utils/url_launcher_utils.dart';
 import 'package:al_ruby_ecommerce/presentation/providers/providers.dart';
 
 class WhatsappSupportView extends ConsumerWidget {
   const WhatsappSupportView({super.key});
 
-  Future<void> _launchWhatsApp(String number) async {
-    final url = 'https://wa.me/$number';
-    final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    }
+  Future<void> _launchWhatsApp(BuildContext context, String number) async {
+    await launchWhatsApp(
+      context: context,
+      phone: number,
+      message: 'Hello Izzfah Noobi, I need support.',
+    );
   }
 
   @override
@@ -50,19 +50,19 @@ class WhatsappSupportView extends ConsumerWidget {
 
                 const Text(
                   'Need Help?',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
                 const Text(
                   'Chat with us on WhatsApp',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFFC6A473)),
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1E60D5)),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 12),
                 const Text(
                   'We are online and ready to help you with order placement, product selection, or delivery issues!',
-                  style: TextStyle(fontSize: 14, color: Colors.grey, height: 1.4),
+                  style: TextStyle(fontSize: 14, color: Color(0xFF64748B), height: 1.4),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 32),
@@ -70,7 +70,7 @@ class WhatsappSupportView extends ConsumerWidget {
                 // WhatsApp Support Action Button
                 businessInfoAsync.when(
                   data: (info) => ElevatedButton.icon(
-                    onPressed: () => _launchWhatsApp(info.whatsappNumber),
+                    onPressed: () => _launchWhatsApp(context, info.whatsappNumber),
                     icon: const Icon(Icons.chat, size: 24),
                     label: const Text('CHAT ON WHATSAPP'),
                     style: ElevatedButton.styleFrom(
@@ -81,8 +81,8 @@ class WhatsappSupportView extends ConsumerWidget {
                     ),
                   ),
                   loading: () => const Center(child: CircularProgressIndicator()),
-                  error: (_, __) => ElevatedButton.icon(
-                    onPressed: () => _launchWhatsApp('+919998887776'),
+                  error: (_, _) => ElevatedButton.icon(
+                    onPressed: () => _launchWhatsApp(context, '919656978468'),
                     icon: const Icon(Icons.chat, size: 24),
                     label: const Text('CHAT ON WHATSAPP'),
                     style: ElevatedButton.styleFrom(
@@ -119,15 +119,15 @@ class WhatsappSupportView extends ConsumerWidget {
         Container(
           padding: const EdgeInsets.all(12),
           decoration: const BoxDecoration(
-            color: Color(0xFF022B20),
+            color: Color(0xFFEFF6FF),
             shape: BoxShape.circle,
           ),
-          child: Icon(icon, color: const Color(0xFFC6A473), size: 24),
+          child: Icon(icon, color: const Color(0xFF1E60D5), size: 24),
         ),
         const SizedBox(height: 8),
         Text(
           label,
-          style: const TextStyle(fontSize: 12, color: Colors.grey, height: 1.2),
+          style: const TextStyle(fontSize: 12, color: Color(0xFF64748B), height: 1.2),
           textAlign: TextAlign.center,
         ),
       ],

@@ -1,11 +1,11 @@
 {
-    "name": "al_ruby_ecommerce",
-    "short_name": "al_ruby_ecommerce",
+    "name": "IZZFAH NOOBI",
+    "short_name": "Izzfah Noobi",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "Izzfah Noobi Store.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

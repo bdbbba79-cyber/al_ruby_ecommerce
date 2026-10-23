@@ -47,6 +47,9 @@ final adminProductsProvider = StreamProvider<List<Product>>((ref) {
   return ref.watch(storeRepoProvider).watchProducts(activeOnly: false);
 });
 
+// Category filter selected across storefront
+final selectedCategoryFilterProvider = StateProvider<String?>((ref) => null);
+
 
 // --- Referral State ---
 // Mappings of productId to the referral code used to visit the product
@@ -157,8 +160,12 @@ class CartNotifier extends StateNotifier<List<CartItem>> {
     _syncWithFirebase();
   }
 
-  void loadCart(List<Product> products, List<Map<String, dynamic>> savedCart) {
-    state = savedCart.map((map) {
+  void syncCart() {
+    _syncWithFirebase();
+  }
+
+  void loadCart(List<Product> products, List<Map<String, dynamic>> savedCart, {bool merge = false}) {
+    final List<CartItem> dbCart = savedCart.map((map) {
       final productId = map['productId'] ?? '';
       final matching = products.where((p) => p.id == productId);
       if (matching.isEmpty) return null;
@@ -169,6 +176,29 @@ class CartNotifier extends StateNotifier<List<CartItem>> {
         referrerCode: map['referrerCode'],
       );
     }).whereType<CartItem>().toList();
+
+    if (merge) {
+      final guestCart = List<CartItem>.from(state);
+      final List<CartItem> mergedCart = List<CartItem>.from(dbCart);
+      for (final guestItem in guestCart) {
+        final idx = mergedCart.indexWhere((dbItem) =>
+            dbItem.product.id == guestItem.product.id &&
+            dbItem.selectedVariantSize == guestItem.selectedVariantSize);
+        if (idx >= 0) {
+          final dbItem = mergedCart[idx];
+          mergedCart[idx] = dbItem.copyWith(
+            quantity: dbItem.quantity + guestItem.quantity,
+            referrerCode: guestItem.referrerCode ?? dbItem.referrerCode,
+          );
+        } else {
+          mergedCart.add(guestItem);
+        }
+      }
+      state = mergedCart;
+      _syncWithFirebase();
+    } else {
+      state = dbCart;
+    }
   }
 
   void _syncWithFirebase() {

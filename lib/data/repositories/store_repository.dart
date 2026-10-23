@@ -9,14 +9,23 @@ class StoreRepository {
   final FirebaseStorage _storage = FirebaseStorage.instance;
 
   // --- Image Upload ---
-  Future<String> uploadImage(Uint8List imageBytes, String path) async {
+  Future<String> uploadImage(Uint8List imageBytes, String path, {String? contentType}) async {
+    final mime = contentType ?? _determineContentType(path);
     final ref = _storage.ref().child(path);
     final uploadTask = ref.putData(
       imageBytes,
-      SettableMetadata(contentType: 'image/jpeg'),
+      SettableMetadata(contentType: mime),
     );
     final snapshot = await uploadTask;
     return await snapshot.ref.getDownloadURL();
+  }
+
+  String _determineContentType(String path) {
+    final lower = path.toLowerCase();
+    if (lower.endsWith('.png')) return 'image/png';
+    if (lower.endsWith('.webp')) return 'image/webp';
+    if (lower.endsWith('.gif')) return 'image/gif';
+    return 'image/jpeg';
   }
 
   Future<void> deleteImage(String url) async {

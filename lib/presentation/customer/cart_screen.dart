@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:al_ruby_ecommerce/presentation/providers/providers.dart';
 import 'package:al_ruby_ecommerce/data/models/business_info.dart';
+import 'package:al_ruby_ecommerce/presentation/widgets/app_network_image.dart';
 
 class CartScreen extends ConsumerStatefulWidget {
   const CartScreen({super.key});
@@ -54,7 +55,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   Widget build(BuildContext context) {
     final cartItems = ref.watch(cartProvider);
     final cartNotifier = ref.read(cartProvider.notifier);
-    final businessInfo = ref.watch(businessInfoProvider).value;
+    final businessInfo = ref.watch(businessInfoProvider).valueOrNull;
     final appliedCoupon = ref.watch(appliedCouponProvider);
 
     final subtotal = cartNotifier.subtotal;
@@ -161,7 +162,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         itemCount: items.length,
-        separatorBuilder: (context, index) => const Divider(color: Color(0xFF05372B), height: 1),
+        separatorBuilder: (context, index) => const Divider(color: Color(0xFFE2E8F0), height: 1),
         itemBuilder: (context, index) {
           final item = items[index];
           final product = item.product;
@@ -175,12 +176,16 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                   width: 70,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: const Color(0xFF05372B)),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
                   ),
                   clipBehavior: Clip.antiAlias,
                   child: product.images.isNotEmpty
-                      ? Image.network(product.images.first, fit: BoxFit.cover)
-                      : Container(color: Colors.grey.shade800),
+                      ? AppNetworkImage.thumbnail(
+                          imageUrl: product.images.first,
+                          size: 70,
+                          fit: BoxFit.cover,
+                        )
+                      : Container(color: const Color(0xFFF1F5F9)),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -189,7 +194,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                     children: [
                       Text(
                         product.name,
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.white),
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF0F172A)),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -197,19 +202,19 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                         const SizedBox(height: 2),
                         Text(
                           'Size: ${item.selectedVariantSize}',
-                          style: const TextStyle(color: Color(0xFFC6A473), fontSize: 12, fontWeight: FontWeight.bold),
+                          style: const TextStyle(color: Color(0xFF1E60D5), fontSize: 12, fontWeight: FontWeight.bold),
                         ),
                       ],
                       const SizedBox(height: 4),
                       Text(
                         '₹${item.unitPrice.toStringAsFixed(0)} each',
-                        style: const TextStyle(color: Colors.grey, fontSize: 12),
+                        style: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
                       ),
                       if (product.shippingFee > 0) ...[
                         const SizedBox(height: 2),
                         Text(
                           'Shipping: ₹${product.shippingFee.toStringAsFixed(0)}',
-                          style: const TextStyle(color: Colors.grey, fontSize: 11),
+                          style: const TextStyle(color: Color(0xFF64748B), fontSize: 11),
                         ),
                       ],
                       const SizedBox(height: 12),
@@ -222,7 +227,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                             padding: const EdgeInsets.symmetric(horizontal: 10.0),
                             child: Text(
                               '${item.quantity}',
-                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
                             ),
                           ),
                           _buildQuantityButton(context, Icons.add, () {
@@ -231,7 +236,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                           const Spacer(),
                           Text(
                             '₹${item.totalPrice.toStringAsFixed(0)}',
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.white),
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF0F172A)),
                           ),
                         ],
                       ),
@@ -248,14 +253,14 @@ class _CartScreenState extends ConsumerState<CartScreen> {
 
   Widget _buildQuantityButton(BuildContext context, IconData icon, VoidCallback onTap) {
     return Material(
-      color: const Color(0xFF05372B),
+      color: const Color(0xFFEFF6FF),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(4),
         child: Padding(
           padding: const EdgeInsets.all(6.0),
-          child: Icon(icon, size: 14, color: Colors.white),
+          child: Icon(icon, size: 14, color: const Color(0xFF1E60D5)),
         ),
       ),
     );
@@ -278,7 +283,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
           children: [
             const Text(
               'Order Summary',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
             ),
             const SizedBox(height: 20),
             
@@ -310,7 +315,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                   },
                   child: Text(
                     appliedCoupon != null ? 'Remove' : 'Apply',
-                    style: const TextStyle(color: Color(0xFFC6A473), fontWeight: FontWeight.bold),
+                    style: const TextStyle(color: Color(0xFF1E60D5), fontWeight: FontWeight.bold),
                   ),
                 ),
               ],
@@ -326,8 +331,8 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Subtotal', style: TextStyle(color: Colors.grey)),
-                Text('₹${subtotal.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                const Text('Subtotal', style: TextStyle(color: Color(0xFF64748B))),
+                Text('₹${subtotal.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
               ],
             ),
             if (discount > 0) ...[
@@ -335,7 +340,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Discount', style: TextStyle(color: Colors.grey)),
+                  const Text('Discount', style: TextStyle(color: Color(0xFF64748B))),
                   Text('- ₹${discount.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
                 ],
               ),
@@ -344,27 +349,27 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Shipping', style: TextStyle(color: Colors.grey)),
+                const Text('Shipping', style: TextStyle(color: Color(0xFF64748B))),
                 Text(
                   shipping == 0 ? 'Free' : '₹${shipping.toStringAsFixed(0)}',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: shipping == 0 ? Colors.green : Colors.white,
+                    color: shipping == 0 ? Colors.green : const Color(0xFF0F172A),
                   ),
                 ),
               ],
             ),
-            const Divider(color: Color(0xFF05372B), height: 28),
+            const Divider(color: Color(0xFFE2E8F0), height: 28),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
                   'Total',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
                 ),
                 Text(
                   '₹${total.toStringAsFixed(0)}',
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1E60D5)),
                 ),
               ],
             ),

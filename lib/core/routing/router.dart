@@ -9,6 +9,7 @@ import 'package:al_ruby_ecommerce/presentation/customer/forgot_password_screen.d
 import 'package:al_ruby_ecommerce/presentation/customer/product_detail_screen.dart';
 import 'package:al_ruby_ecommerce/presentation/customer/cart_screen.dart';
 import 'package:al_ruby_ecommerce/presentation/customer/checkout_screen.dart';
+import 'package:al_ruby_ecommerce/presentation/customer/my_addresses_screen.dart';
 import 'package:al_ruby_ecommerce/presentation/admin/admin_dashboard_screen.dart';
 import 'package:al_ruby_ecommerce/presentation/admin/admin_products_screen.dart';
 import 'package:al_ruby_ecommerce/presentation/admin/admin_categories_screen.dart';
@@ -30,7 +31,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
 
       // Accessing private customer routes
-      if (state.matchedLocation == '/profile' || state.matchedLocation == '/checkout' || state.matchedLocation == '/orders') {
+      if (state.matchedLocation == '/profile' || state.matchedLocation == '/checkout' || state.matchedLocation == '/orders' || state.matchedLocation == '/addresses') {
         if (user == null) return '/login';
       }
 
@@ -87,6 +88,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/profile',
         builder: (context, state) => const CustomerLayout(initialIndex: 4),
+      ),
+      GoRoute(
+        path: '/addresses',
+        builder: (context, state) => const MyAddressesScreen(),
       ),
       
       // Admin Panel Routes

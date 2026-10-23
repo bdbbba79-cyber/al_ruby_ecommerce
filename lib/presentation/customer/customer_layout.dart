@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:al_ruby_ecommerce/presentation/providers/providers.dart';
 import 'package:al_ruby_ecommerce/data/models/business_info.dart';
+import 'package:al_ruby_ecommerce/presentation/widgets/app_network_image.dart';
 
 // Tab Views
 import 'package:al_ruby_ecommerce/presentation/customer/home_screen.dart';
@@ -34,7 +35,7 @@ class _CustomerLayoutState extends ConsumerState<CustomerLayout> {
   Widget build(BuildContext context) {
     final selectedIndex = ref.watch(customerTabIndexProvider);
     final user = ref.watch(currentUserDetailsProvider);
-    final businessInfo = ref.watch(businessInfoProvider).value;
+    final businessInfo = ref.watch(businessInfoProvider).valueOrNull;
     final isDesktop = MediaQuery.of(context).size.width > 800;
 
     // List of screens corresponding to the tab index
@@ -54,7 +55,7 @@ class _CustomerLayoutState extends ConsumerState<CustomerLayout> {
           : Container(
               decoration: const BoxDecoration(
                 border: Border(
-                  top: BorderSide(color: Color(0xFF05372B), width: 1.5),
+                  top: BorderSide(color: Color(0xFFE2E8F0), width: 1.0),
                 ),
               ),
               child: BottomNavigationBar(
@@ -62,9 +63,9 @@ class _CustomerLayoutState extends ConsumerState<CustomerLayout> {
                 onTap: (index) {
                   ref.read(customerTabIndexProvider.notifier).state = index;
                 },
-                backgroundColor: Theme.of(context).colorScheme.surface,
-                selectedItemColor: Theme.of(context).colorScheme.primary,
-                unselectedItemColor: Colors.white.withOpacity(0.6),
+                backgroundColor: Colors.white,
+                selectedItemColor: const Color(0xFF1E60D5),
+                unselectedItemColor: const Color(0xFF64748B),
                 type: BottomNavigationBarType.fixed,
                 showUnselectedLabels: true,
                 selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
@@ -103,23 +104,27 @@ class _CustomerLayoutState extends ConsumerState<CustomerLayout> {
 
   PreferredSizeWidget _buildDesktopHeader(BuildContext context, int selectedIndex, user, BusinessInfo? businessInfo) {
     return AppBar(
+      backgroundColor: Colors.white,
+      elevation: 0.5,
       title: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (businessInfo?.companyLogoUrl != null && businessInfo!.companyLogoUrl.isNotEmpty)
-            Image.network(
-              businessInfo.companyLogoUrl,
-              height: 32,
-              width: 32,
+            AppNetworkImage(
+              imageUrl: businessInfo.companyLogoUrl,
+              height: 36,
+              width: 36,
+              cacheWidth: 108,
+              cacheHeight: 108,
               fit: BoxFit.contain,
-              errorBuilder: (_, __, ___) => Image.asset('assets/logo/favicon.png', height: 32, width: 32),
+              fallbackAsset: 'assets/logo/logo.png',
             )
           else
-            Image.asset('assets/logo/favicon.png', height: 32, width: 32),
+            Image.asset('assets/logo/logo.png', height: 36, width: 36, cacheWidth: 108, cacheHeight: 108, fit: BoxFit.contain),
           const SizedBox(width: 10),
           Text(
-            businessInfo?.companyName ?? 'Al Ruby Perfumes',
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.white, letterSpacing: 0.5),
+            businessInfo?.companyName ?? 'IZZFAH NOOBI',
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Color(0xFF0F172A), letterSpacing: 0.5),
           ),
         ],
       ),
@@ -134,7 +139,7 @@ class _CustomerLayoutState extends ConsumerState<CustomerLayout> {
         const SizedBox(width: 16),
         // Cart Icon
         IconButton(
-          icon: const Icon(Icons.shopping_bag_outlined, color: Colors.white),
+          icon: const Icon(Icons.shopping_bag_outlined, color: Color(0xFF1E60D5)),
           onPressed: () => context.push('/cart'),
         ),
         if (user?.role == 'admin') ...[
@@ -144,8 +149,8 @@ class _CustomerLayoutState extends ConsumerState<CustomerLayout> {
             icon: const Icon(Icons.admin_panel_settings_outlined, size: 18),
             label: const Text('Admin Panel'),
             style: OutlinedButton.styleFrom(
-              foregroundColor: const Color(0xFFC6A473),
-              side: const BorderSide(color: Color(0xFFC6A473)),
+              foregroundColor: const Color(0xFF1E60D5),
+              side: const BorderSide(color: Color(0xFF1E60D5)),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             ),
           ),
@@ -163,7 +168,7 @@ class _CustomerLayoutState extends ConsumerState<CustomerLayout> {
           ref.read(customerTabIndexProvider.notifier).state = index;
         },
         style: TextButton.styleFrom(
-          foregroundColor: isSelected ? const Color(0xFFC6A473) : Colors.white.withOpacity(0.8),
+          foregroundColor: isSelected ? const Color(0xFF1E60D5) : const Color(0xFF64748B),
         ),
         child: Text(
           label,

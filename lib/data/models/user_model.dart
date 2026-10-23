@@ -1,3 +1,5 @@
+import 'package:al_ruby_ecommerce/data/models/address_model.dart';
+
 class UserModel {
   final String id;
   final String name;
@@ -15,12 +17,15 @@ class UserModel {
   final bool withdrawalRequested;
   final double withdrawalRequestedAmount;
  
-  // Saved Address Details
+  // Saved Address Details (Legacy single address)
   final String savedHouseStreet;
   final String savedCity;
   final String savedDistrict;
   final String savedState;
   final String savedPinCode;
+
+  // Multiple Saved Addresses
+  final List<AddressModel> addresses;
  
   UserModel({
     required this.id,
@@ -41,7 +46,29 @@ class UserModel {
     this.savedDistrict = '',
     this.savedState = '',
     this.savedPinCode = '',
+    this.addresses = const [],
   });
+
+  List<AddressModel> get allAddresses {
+    if (addresses.isNotEmpty) return addresses;
+    if (savedHouseStreet.isNotEmpty) {
+      return [
+        AddressModel(
+          id: 'default',
+          name: name,
+          phoneNumber: phoneNumber,
+          houseStreet: savedHouseStreet,
+          city: savedCity,
+          district: savedDistrict,
+          state: savedState,
+          pinCode: savedPinCode,
+          tag: 'Home',
+          isDefault: true,
+        ),
+      ];
+    }
+    return [];
+  }
  
   double get walletBalance => totalEarned - totalPaid;
  
@@ -76,6 +103,9 @@ class UserModel {
       savedDistrict: map['savedDistrict'] ?? '',
       savedState: map['savedState'] ?? '',
       savedPinCode: map['savedPinCode'] ?? '',
+      addresses: (map['addresses'] as List?)
+          ?.map((a) => AddressModel.fromMap(Map<String, dynamic>.from(a)))
+          .toList() ?? [],
     );
   }
  
@@ -98,6 +128,7 @@ class UserModel {
       'savedDistrict': savedDistrict,
       'savedState': savedState,
       'savedPinCode': savedPinCode,
+      'addresses': addresses.map((a) => a.toMap()).toList(),
     };
   }
 
@@ -120,6 +151,7 @@ class UserModel {
     String? savedDistrict,
     String? savedState,
     String? savedPinCode,
+    List<AddressModel>? addresses,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -140,6 +172,7 @@ class UserModel {
       savedDistrict: savedDistrict ?? this.savedDistrict,
       savedState: savedState ?? this.savedState,
       savedPinCode: savedPinCode ?? this.savedPinCode,
+      addresses: addresses ?? this.addresses,
     );
   }
 }
